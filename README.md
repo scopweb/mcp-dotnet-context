@@ -231,10 +231,13 @@ echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-1
 
 ## 📚 Documentation
 
-- **[MCP Setup Guide](docs/MCP_SETUP_GUIDE.md)** - Detailed configuration instructions
+### Setup & Usage
+- **[MCP Setup Guide](docs/MCP_SETUP_GUIDE.md)** (ES) / **[English](docs/MCP_SETUP_GUIDE.en.md)** - Detailed configuration instructions
+- **[Usage Examples](docs/USAGE_EXAMPLES.md)** (ES) / **[English](docs/USAGE_EXAMPLES.en.md)** - Practical examples and scenarios
+
+### Development
 - **[Development Guide](docs/CLAUDE.md)** - Project architecture and development workflow
 - **[Creating MCPs with Rust](docs/CrearUnMcpConRust.md)** - Complete guide to building MCP servers
-- **[Usage Examples](docs/USAGE_EXAMPLES.md)** - Practical examples and scenarios
 - **[Pattern Catalog](docs/PATTERNS_CATALOG.md)** - All 27+ built-in patterns
 - **[Changelog](CHANGELOG.md)** - Version history
 

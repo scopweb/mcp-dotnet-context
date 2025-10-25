@@ -1,0 +1,583 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-data-httpclient",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "HttpClient Best Practice for APIs",
+      "description": "Use injected HttpClient with proper error handling, cancellation tokens, and retry policies. Configure base address and default headers in Program.cs for Blazor Server.",
+      "code": "@inject HttpClient Http\n@inject ILogger<MyComponent> Logger\n\n@code {\n    private List<WeatherForecast>? forecasts;\n    private string? errorMessage;\n    private bool isLoading;\n\n    protected override async Task OnInitializedAsync()\n    {\n        await LoadDataAsync();\n    }\n\n    private async Task LoadDataAsync()\n    {\n        isLoading = true;\n        errorMessage = null;\n\n        try\n        {\n            // Use GetFromJsonAsync for automatic deserialization\n            forecasts = await Http.GetFromJsonAsync<List<WeatherForecast>>(\n                \"api/weatherforecast\");\n        }\n        catch (HttpRequestException ex)\n        {\n            errorMessage = $\"Network error: {ex.Message}\";\n            Logger.LogError(ex, \"Failed to load weather data\");\n        }\n        catch (Exception ex)\n        {\n            errorMessage = \"An unexpected error occurred\";\n            Logger.LogError(ex, \"Unexpected error loading data\");\n        }\n        finally\n        {\n            isLoading = false;\n        }\n    }\n}\n\n// In Program.cs:\n// builder.Services.AddHttpClient<MyService>(client =>\n// {\n//     client.BaseAddress = new Uri(\"https://api.example.com\");\n//     client.DefaultRequestHeaders.Add(\"User-Agent\", \"MyApp/1.0\");\n// });\n//",
+      "tags": [
+        "data-access",
+        "httpclient",
+        "api",
+        "error-handling",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.93,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-data-streaming",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Streaming Data with IAsyncEnumerable",
+      "description": ".NET 10 feature: Use IAsyncEnumerable to stream data progressively from APIs. Improves perceived performance and memory usage for large datasets.",
+      "code": "@inject IDataService DataService\n\n<div>\n    @foreach (var item in items)\n    {\n        <div>@item.Name</div>\n    }\n    @if (isLoading)\n    {\n        <p>Loading more...</p>\n    }\n</div>\n\n@code {\n    private List<DataItem> items = new();\n    private bool isLoading = true;\n\n    protected override async Task OnInitializedAsync()\n    {\n        await LoadDataStreamAsync();\n    }\n\n    private async Task LoadDataStreamAsync()\n    {\n        // Stream data as it arrives\n        await foreach (var item in DataService.GetItemsAsync())\n        {\n            items.Add(item);\n\n            // Update UI every 10 items\n            if (items.Count % 10 == 0)\n            {\n                StateHasChanged();\n                await Task.Delay(1); // Yield to UI thread\n            }\n        }\n\n        isLoading = false;\n        StateHasChanged();\n    }\n}\n\n// In IDataService:\n// public async IAsyncEnumerable<DataItem> GetItemsAsync(\n//     [EnumeratorCancellation] CancellationToken cancellationToken = default)\n// {\n//     await foreach (var item in FetchFromApiAsync(cancellationToken))\n//     {\n//         yield return item;\n//     }\n// }",
+      "tags": [
+        "data-access",
+        "streaming",
+        "asyncenumerable",
+        "performance",
+        "blazor-server",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.91,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-data-circuit-state",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Circuit State Persistence",
+      "description": ".NET 10 feature: Persist important state across circuit reconnections. Prevents data loss when Blazor Server circuit is temporarily disconnected.",
+      "code": "@using Microsoft.AspNetCore.Components.Server.Circuits\n@inject CircuitHandler CircuitHandler\n@inject ILogger<MyComponent> Logger\n\n@code {\n    private FormData formData = new();\n    private bool isDirty;\n\n    protected override void OnInitialized()\n    {\n        // Restore state if available\n        if (CircuitHandler is PersistentCircuitHandler persistentHandler)\n        {\n            formData = persistentHandler.GetState<FormData>(\"formData\") ?? new();\n        }\n    }\n\n    private void OnInputChanged()\n    {\n        isDirty = true;\n\n        // Persist state for reconnection\n        if (CircuitHandler is PersistentCircuitHandler persistentHandler)\n        {\n            persistentHandler.SetState(\"formData\", formData);\n        }\n    }\n\n    private async Task SaveForm()\n    {\n        try\n        {\n            await SaveToApiAsync(formData);\n            isDirty = false;\n\n            // Clear persisted state after successful save\n            if (CircuitHandler is PersistentCircuitHandler persistentHandler)\n            {\n                persistentHandler.ClearState(\"formData\");\n            }\n        }\n        catch (Exception ex)\n        {\n            Logger.LogError(ex, \"Failed to save form\");\n        }\n    }\n}\n\n// Register in Program.cs:\n// builder.Services.AddScoped<CircuitHandler, PersistentCircuitHandler>();",
+      "tags": [
+        "data-access",
+        "state",
+        "persistence",
+        "circuit",
+        "reconnection",
+        "blazor-server",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.88,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-data-form-validation",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "EditForm with Data Annotations",
+      "description": "Use EditForm with EditContext and DataAnnotationsValidator for robust form validation. Supports client-side validation without JavaScript.",
+      "code": "@using System.ComponentModel.DataAnnotations\n\n<EditForm Model=\"@model\" OnValidSubmit=\"@HandleValidSubmit\">\n    <DataAnnotationsValidator />\n    <ValidationSummary />\n\n    <div class=\"form-group\">\n        <label>Name:</label>\n        <InputText @bind-Value=\"model.Name\" class=\"form-control\" />\n        <ValidationMessage For=\"@(() => model.Name)\" />\n    </div>\n\n    <div class=\"form-group\">\n        <label>Email:</label>\n        <InputText @bind-Value=\"model.Email\" class=\"form-control\" />\n        <ValidationMessage For=\"@(() => model.Email)\" />\n    </div>\n\n    <div class=\"form-group\">\n        <label>Age:</label>\n        <InputNumber @bind-Value=\"model.Age\" class=\"form-control\" />\n        <ValidationMessage For=\"@(() => model.Age)\" />\n    </div>\n\n    <button type=\"submit\" class=\"btn btn-primary\" disabled=\"@isSubmitting\">\n        @(isSubmitting ? \"Saving...\" : \"Submit\")\n    </button>\n</EditForm>\n\n@code {\n    private PersonModel model = new();\n    private bool isSubmitting;\n\n    private async Task HandleValidSubmit()\n    {\n        isSubmitting = true;\n        try\n        {\n            await SavePersonAsync(model);\n            // Reset form\n            model = new PersonModel();\n        }\n        finally\n        {\n            isSubmitting = false;\n        }\n    }\n\n    public class PersonModel\n    {\n        [Required(ErrorMessage = \"Name is required\")]\n        [StringLength(100, MinimumLength = 2)]\n        public string Name { get; set; } = \"\";\n\n        [Required]\n        [EmailAddress(ErrorMessage = \"Invalid email format\")]\n        public string Email { get; set; } = \"\";\n\n        [Range(18, 120, ErrorMessage = \"Age must be between 18 and 120\")]\n        public int Age { get; set; }\n    }\n}",
+      "tags": [
+        "data-access",
+        "forms",
+        "validation",
+        "editform",
+        "data-annotations",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.95,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-di-service-injection",
+      "category": "dependency-injection",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Service Injection in Components",
+      "description": "Proper way to inject services into Blazor Server components",
+      "code": "@inject IDataService DataService\n@inject ILogger<MyComponent> Logger\n\n@code {\n    protected override async Task OnInitializedAsync()\n    {\n        try\n        {\n            var data = await DataService.GetDataAsync();\n            Logger.LogInformation(\"Data loaded successfully\");\n        }\n        catch (Exception ex)\n        {\n            Logger.LogError(ex, \"Error loading data\");\n        }\n    }\n}",
+      "tags": [
+        "dependency-injection",
+        "services",
+        "blazor-server",
+        "logging"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-di-scoped-service",
+      "category": "dependency-injection",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Register Scoped Service",
+      "description": "Register a scoped service for Blazor Server (one instance per circuit)",
+      "code": "// In Program.cs\nbuilder.Services.AddScoped<IDataService, DataService>();\nbuilder.Services.AddScoped<IAuthService, AuthService>();\n\n// Services are shared across components in the same circuit\n// but isolated between different users",
+      "tags": [
+        "dependency-injection",
+        "program-cs",
+        "blazor-server",
+        "scoped"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.88,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-jsinterop-basic",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Basic JavaScript Interop Pattern",
+      "description": "Call JavaScript functions from Blazor using IJSRuntime. Use InvokeVoidAsync for functions without return values and InvokeAsync<T> for functions that return data.",
+      "code": "@inject IJSRuntime JS\n\n<button @onclick=\"ShowAlert\">Show Alert</button>\n<button @onclick=\"GetWindowSize\">Get Window Size</button>\n\n@code {\n    private async Task ShowAlert()\n    {\n        // Call JS function without return value\n        await JS.InvokeVoidAsync(\"alert\", \"Hello from Blazor!\");\n    }\n\n    private async Task GetWindowSize()\n    {\n        // Call JS function with return value\n        var width = await JS.InvokeAsync<int>(\"getWindowWidth\");\n        var height = await JS.InvokeAsync<int>(\"getWindowHeight\");\n\n        Console.WriteLine($\"Window: {width}x{height}\");\n    }\n}\n\n@* In wwwroot/js/interop.js: *@\n@* window.getWindowWidth = () => window.innerWidth; *@\n@* window.getWindowHeight = () => window.innerHeight; *@",
+      "tags": [
+        "jsinterop",
+        "javascript",
+        "interop",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.9,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-jsinterop-dotnetref",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Calling .NET from JavaScript",
+      "description": "Pass DotNetObjectReference to JavaScript to allow JS to call back into .NET methods. Use [JSInvokable] attribute on methods that can be called from JS.",
+      "code": "@inject IJSRuntime JS\n@implements IDisposable\n\n<button @onclick=\"StartTimer\">Start Timer</button>\n<p>Count: @count</p>\n\n@code {\n    private DotNetObjectReference<TimerComponent>? dotNetRef;\n    private int count = 0;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender)\n        {\n            dotNetRef = DotNetObjectReference.Create(this);\n            await JS.InvokeVoidAsync(\"initializeTimer\", dotNetRef);\n        }\n    }\n\n    private async Task StartTimer()\n    {\n        await JS.InvokeVoidAsync(\"startTimer\");\n    }\n\n    [JSInvokable]\n    public void OnTimerTick()\n    {\n        count++;\n        StateHasChanged(); // Must call to update UI\n    }\n\n    public void Dispose()\n    {\n        dotNetRef?.Dispose();\n    }\n}\n\n@* In wwwroot/js/interop.js: *@\n@* let dotNetHelper;\n   window.initializeTimer = (helper) => { dotNetHelper = helper; };\n   window.startTimer = () => {\n     setInterval(() => {\n       dotNetHelper.invokeMethodAsync('OnTimerTick');\n     }, 1000);\n   }; *@",
+      "tags": [
+        "jsinterop",
+        "dotnetref",
+        "callback",
+        "jsinvokable",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-jsinterop-isolation",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "JavaScript Isolation Modules",
+      "description": ".NET 10 best practice: Use ES6 modules with IJSObjectReference for isolated, component-specific JavaScript. Prevents global namespace pollution and enables tree-shaking.",
+      "code": "@inject IJSRuntime JS\n@implements IAsyncDisposable\n\n@code {\n    private IJSObjectReference? module;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender)\n        {\n            // Load ES6 module\n            module = await JS.InvokeAsync<IJSObjectReference>(\n                \"import\",\n                \"./Components/MyComponent.razor.js\");\n\n            // Call module function\n            await module.InvokeVoidAsync(\"initialize\", myElement);\n        }\n    }\n\n    private async Task DoSomething()\n    {\n        if (module != null)\n        {\n            var result = await module.InvokeAsync<string>(\"processData\", data);\n        }\n    }\n\n    public async ValueTask DisposeAsync()\n    {\n        if (module != null)\n        {\n            await module.DisposeAsync();\n        }\n    }\n}\n\n@* In Components/MyComponent.razor.js: *@\n@* export function initialize(element) {\n     // Component-specific JS code\n   }\n   export function processData(data) {\n     return data.toUpperCase();\n   } *@",
+      "tags": [
+        "jsinterop",
+        "modules",
+        "isolation",
+        "es6",
+        "blazor-server",
+        "best-practice"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.94,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-jsinterop-elementref",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "ElementReference for DOM Manipulation",
+      "description": "Use ElementReference with @ref to pass specific DOM elements to JavaScript. Only available after OnAfterRender when the element is actually rendered.",
+      "code": "@inject IJSRuntime JS\n\n<div @ref=\"chartContainer\" class=\"chart\"></div>\n<input @ref=\"inputElement\" @oninput=\"OnInput\" />\n\n@code {\n    private ElementReference chartContainer;\n    private ElementReference inputElement;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender)\n        {\n            // Element reference is now valid\n            await JS.InvokeVoidAsync(\"initializeChart\", chartContainer);\n\n            // Focus the input element\n            await JS.InvokeVoidAsync(\"focusElement\", inputElement);\n        }\n    }\n\n    private async Task OnInput(ChangeEventArgs e)\n    {\n        // Process input\n        await JS.InvokeVoidAsync(\"highlightElement\", inputElement);\n    }\n}\n\n@* In wwwroot/js/interop.js: *@\n@* window.initializeChart = (element) => {\n     // Use the actual DOM element\n     new Chart(element, config);\n   };\n   window.focusElement = (element) => element.focus();\n   window.highlightElement = (element) => {\n     element.classList.add('highlight');\n   }; *@",
+      "tags": [
+        "jsinterop",
+        "elementreference",
+        "dom",
+        "ref",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.89,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-afterrender",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "OnAfterRender for DOM Manipulation",
+      "description": "Use OnAfterRenderAsync for JavaScript interop and DOM manipulation after the component has rendered. Use firstRender parameter to run initialization only once.",
+      "code": "@inject IJSRuntime JS\n\n@code {\n    private ElementReference myElement;\n    private bool isInitialized = false;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender && !isInitialized)\n        {\n            // Only run once on first render\n            await JS.InvokeVoidAsync(\"initializeComponent\", myElement);\n            isInitialized = true;\n        }\n\n        await base.OnAfterRenderAsync(firstRender);\n    }\n}",
+      "tags": [
+        "lifecycle",
+        "afterrender",
+        "jsinterop",
+        "dom",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-statehaschanged",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "StateHasChanged Best Practice",
+      "description": "Properly use StateHasChanged to trigger re-renders. Avoid calling it unnecessarily as it enqueues a render. Note that EventCallback automatically calls StateHasChanged.",
+      "code": "@code {\n    private string status = \"Loading...\";\n    private bool isProcessing = false;\n\n    protected override async Task OnInitializedAsync()\n    {\n        // Load initial data\n        await LoadDataAsync();\n    }\n\n    private async Task LoadDataAsync()\n    {\n        isProcessing = true;\n        // StateHasChanged is NOT needed here if called from EventCallback\n        // But needed for background tasks\n        StateHasChanged();\n\n        try\n        {\n            await Task.Delay(1000); // Simulate API call\n            status = \"Loaded\";\n        }\n        finally\n        {\n            isProcessing = false;\n            StateHasChanged(); // Trigger re-render after async operation\n        }\n    }\n\n    private async Task HandleClick()\n    {\n        // EventCallback automatically calls StateHasChanged\n        // No need to call it manually here\n        await LoadDataAsync();\n    }\n}",
+      "tags": [
+        "lifecycle",
+        "statehaschanged",
+        "rendering",
+        "blazor-server",
+        "best-practice"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.94,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-dispose",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Proper Resource Disposal",
+      "description": "Implement IDisposable to clean up resources, cancel pending async operations, and unsubscribe from events. Critical for preventing memory leaks in Blazor Server circuits.",
+      "code": "@implements IDisposable\n@inject HttpClient Http\n\n@code {\n    private CancellationTokenSource? cts;\n    private Timer? timer;\n\n    protected override async Task OnInitializedAsync()\n    {\n        cts = new CancellationTokenSource();\n\n        // Use cancellation token for async operations\n        await LoadDataAsync(cts.Token);\n\n        // Setup timer with disposal\n        timer = new Timer(OnTimerElapsed, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));\n    }\n\n    private async Task LoadDataAsync(CancellationToken cancellationToken)\n    {\n        try\n        {\n            var data = await Http.GetFromJsonAsync<MyData>(\"api/data\", cancellationToken);\n            // Process data\n        }\n        catch (OperationCanceledException)\n        {\n            // Handle cancellation gracefully\n        }\n    }\n\n    private void OnTimerElapsed(object? state)\n    {\n        // Timer callback\n        InvokeAsync(StateHasChanged);\n    }\n\n    public void Dispose()\n    {\n        // Cancel pending operations\n        cts?.Cancel();\n        cts?.Dispose();\n\n        // Dispose timer\n        timer?.Dispose();\n    }\n}",
+      "tags": [
+        "lifecycle",
+        "dispose",
+        "cleanup",
+        "cancellation",
+        "memory-leak",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.96,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-setparametersasync",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "SetParametersAsync for Advanced Parameter Handling",
+      "description": "Override SetParametersAsync for advanced scenarios where you need to intercept and process parameters before the component lifecycle continues. Useful for validation and transformation.",
+      "code": "@code {\n    [Parameter]\n    public int ItemId { get; set; }\n\n    private int previousItemId;\n    private bool isLoading;\n\n    public override async Task SetParametersAsync(ParameterView parameters)\n    {\n        // Get the new parameter value before setting\n        var newItemId = parameters.GetValueOrDefault<int>(nameof(ItemId));\n\n        // Check if parameter actually changed\n        if (newItemId != previousItemId && newItemId != default)\n        {\n            isLoading = true;\n            StateHasChanged();\n\n            // Set parameters (calls OnParametersSet internally)\n            await base.SetParametersAsync(parameters);\n\n            // Reload data for new item\n            await LoadItemDataAsync(newItemId);\n\n            previousItemId = newItemId;\n            isLoading = false;\n            StateHasChanged();\n        }\n        else\n        {\n            await base.SetParametersAsync(parameters);\n        }\n    }\n\n    private async Task LoadItemDataAsync(int itemId)\n    {\n        // Load data specific to this item\n        await Task.Delay(500);\n    }\n}",
+      "tags": [
+        "lifecycle",
+        "parameters",
+        "setparameters",
+        "advanced",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.88,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-oninit",
+      "category": "patterns",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Component Initialization Pattern",
+      "description": "Proper way to initialize Blazor Server components with async operations",
+      "code": "@code {\n    protected override async Task OnInitializedAsync()\n    {\n        // Load data from service\n        await LoadDataAsync();\n        \n        // Always call base\n        await base.OnInitializedAsync();\n    }\n    \n    private async Task LoadDataAsync()\n    {\n        // Use injected service\n        data = await DataService.GetDataAsync();\n    }\n}",
+      "tags": [
+        "lifecycle",
+        "initialization",
+        "async",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.95,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-params",
+      "category": "patterns",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Parameter Change Handling",
+      "description": "React to parameter changes in Blazor components",
+      "code": "@code {\n    [Parameter]\n    public int ItemId { get; set; }\n    \n    protected override async Task OnParametersSetAsync()\n    {\n        if (ItemId != previousItemId)\n        {\n            previousItemId = ItemId;\n            await ReloadDataAsync();\n        }\n        \n        await base.OnParametersSetAsync();\n    }\n}",
+      "tags": [
+        "lifecycle",
+        "parameters",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.9,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-perf-shouldrender",
+      "category": "performance",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "ShouldRender Optimization",
+      "description": "Override ShouldRender to control when a component re-renders. Return false to skip unnecessary renders and improve performance. Critical for high-frequency update scenarios.",
+      "code": "@code {\n    [Parameter]\n    public int Value { get; set; }\n\n    private int previousValue;\n    private bool hasChanges;\n\n    protected override void OnParametersSet()\n    {\n        // Track if value actually changed\n        hasChanges = Value != previousValue;\n        previousValue = Value;\n\n        base.OnParametersSet();\n    }\n\n    protected override bool ShouldRender()\n    {\n        // Only render if there are actual changes\n        if (!hasChanges)\n        {\n            return false; // Skip render\n        }\n\n        hasChanges = false;\n        return true; // Allow render\n    }\n}",
+      "tags": [
+        "performance",
+        "rendering",
+        "optimization",
+        "shouldrender",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.93,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-perf-virtualization",
+      "category": "performance",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Virtualize Component for Large Lists",
+      "description": "Use the Virtualize component for rendering large lists efficiently. Only renders items currently visible in the viewport, dramatically improving performance with thousands of items.",
+      "code": "@using Microsoft.AspNetCore.Components.Web.Virtualization\n\n<Virtualize Items=\"@items\" Context=\"item\">\n    <div class=\"item\">\n        <h3>@item.Title</h3>\n        <p>@item.Description</p>\n    </div>\n</Virtualize>\n\n@* For async data loading *@\n<Virtualize ItemsProvider=\"@LoadItems\" Context=\"item\">\n    <ItemContent>\n        <div class=\"item\">@item.Name</div>\n    </ItemContent>\n    <Placeholder>\n        <div class=\"placeholder\">Loading...</div>\n    </Placeholder>\n</Virtualize>\n\n@code {\n    private List<MyItem> items = new();\n\n    protected override async Task OnInitializedAsync()\n    {\n        // Load data\n        items = await GetItemsAsync();\n    }\n\n    private async ValueTask<ItemsProviderResult<MyItem>> LoadItems(\n        ItemsProviderRequest request)\n    {\n        // Load only the requested range\n        var items = await GetItemsAsync(\n            request.StartIndex,\n            request.Count,\n            request.CancellationToken);\n\n        return new ItemsProviderResult<MyItem>(items, totalItemCount);\n    }\n}",
+      "tags": [
+        "performance",
+        "virtualization",
+        "large-lists",
+        "optimization",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.95,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-perf-key-attribute",
+      "category": "performance",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "@key Directive for List Rendering",
+      "description": "Use @key directive when rendering collections to help Blazor track elements efficiently. Prevents unnecessary DOM updates and improves performance when lists change.",
+      "code": "@foreach (var item in items)\n{\n    <div @key=\"item.Id\">\n        <ItemComponent Item=\"@item\" />\n    </div>\n}\n\n@* Without @key, Blazor may recreate all components\n   With @key, Blazor preserves existing components *@\n\n@code {\n    private List<TodoItem> items = new();\n\n    private void AddItem()\n    {\n        items.Insert(0, new TodoItem { Id = Guid.NewGuid(), Title = \"New\" });\n        // With @key, only the new item component is created\n        // Existing components are preserved and reused\n    }\n\n    private void RemoveItem(Guid id)\n    {\n        items.RemoveAll(x => x.Id == id);\n        // With @key, only the removed component is destroyed\n    }\n}",
+      "tags": [
+        "performance",
+        "rendering",
+        "key-directive",
+        "lists",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.9,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-perf-streaming-rendering",
+      "category": "performance",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Streaming Rendering for Faster Initial Load",
+      "description": ".NET 10 feature: Use streaming rendering to send initial HTML quickly while async operations complete. Improves perceived performance and Core Web Vitals.",
+      "code": "@* Enable streaming rendering in the component *@\n@attribute [StreamRendering]\n\n<PageTitle>My Page</PageTitle>\n\n@if (data == null)\n{\n    <p>Loading...</p>\n}\nelse\n{\n    <div>\n        <h1>@data.Title</h1>\n        <p>@data.Content</p>\n    </div>\n}\n\n@code {\n    private MyData? data;\n\n    protected override async Task OnInitializedAsync()\n    {\n        // Initial render happens immediately with Loading state\n        // Then re-renders when data arrives\n        await Task.Delay(100); // Simulate fast cache check\n\n        if (CachedData != null)\n        {\n            data = CachedData;\n            StateHasChanged(); // First streaming update\n        }\n\n        // Load full data\n        data = await LoadDataAsync();\n        // Automatic re-render with full data\n    }\n}",
+      "tags": [
+        "performance",
+        "streaming",
+        "ssr",
+        "initial-load",
+        "blazor-server",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.91,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-perf-preserve-whitespace",
+      "category": "performance",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Reduce Render Size with PreserveWhitespace",
+      "description": "Use @preservewhitespace false to reduce rendered HTML size by removing unnecessary whitespace. Can reduce payload by 10-15% in some cases.",
+      "code": "@* At component level *@\n@preservewhitespace false\n\n<div>\n    <h1>Title</h1>\n    <p>Content without extra whitespace in output</p>\n</div>\n\n@* Or globally in _Imports.razor *@\n@* Add this to your _Imports.razor: *@\n@* @preservewhitespace false *@\n\n@code {\n    // No code changes needed\n    // This is a rendering optimization\n    // Reduces HTML payload size\n    // Improves bandwidth usage\n}",
+      "tags": [
+        "performance",
+        "rendering",
+        "optimization",
+        "bandwidth",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.85,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-security-authorize",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Component Authorization with [Authorize]",
+      "description": "Use [Authorize] attribute to protect components and require authentication. Supports role-based and policy-based authorization out of the box.",
+      "code": "@attribute [Authorize]\n@* Or with roles: *@\n@* @attribute [Authorize(Roles = \"Admin,Manager\")] *@\n@* Or with policy: *@\n@* @attribute [Authorize(Policy = \"RequireAdminRole\")] *@\n\n@inject AuthenticationStateProvider AuthStateProvider\n\n<h3>Protected Component</h3>\n\n<AuthorizeView Roles=\"Admin\">\n    <Authorized>\n        <p>Welcome, admin @context.User.Identity?.Name!</p>\n        <AdminPanel />\n    </Authorized>\n    <NotAuthorized>\n        <p>You don't have admin access.</p>\n    </NotAuthorized>\n</AuthorizeView>\n\n@code {\n    private ClaimsPrincipal? user;\n\n    protected override async Task OnInitializedAsync()\n    {\n        var authState = await AuthStateProvider.GetAuthenticationStateAsync();\n        user = authState.User;\n\n        if (user?.Identity?.IsAuthenticated ?? false)\n        {\n            // User is authenticated\n            var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value);\n        }\n    }\n}",
+      "tags": [
+        "security",
+        "authorization",
+        "authentication",
+        "authorize",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.94,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-security-cascading-auth",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Cascading Authentication State",
+      "description": "Use CascadingAuthenticationState to make user authentication state available throughout the component hierarchy without manual injection.",
+      "code": "@* In App.razor or MainLayout.razor: *@\n<CascadingAuthenticationState>\n    <Router AppAssembly=\"@typeof(App).Assembly\">\n        <Found Context=\"routeData\">\n            <AuthorizeRouteView RouteData=\"@routeData\" DefaultLayout=\"@typeof(MainLayout)\">\n                <NotAuthorized>\n                    @if (context.User.Identity?.IsAuthenticated != true)\n                    {\n                        <RedirectToLogin />\n                    }\n                    else\n                    {\n                        <p>You are not authorized to access this resource.</p>\n                    }\n                </NotAuthorized>\n            </AuthorizeRouteView>\n        </Found>\n    </Router>\n</CascadingAuthenticationState>\n\n@* In any child component: *@\n@code {\n    [CascadingParameter]\n    private Task<AuthenticationState>? AuthStateTask { get; set; }\n\n    protected override async Task OnInitializedAsync()\n    {\n        if (AuthStateTask != null)\n        {\n            var authState = await AuthStateTask;\n            var user = authState.User;\n\n            if (user.Identity?.IsAuthenticated ?? false)\n            {\n                // Access user claims\n                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;\n                var email = user.FindFirst(ClaimTypes.Email)?.Value;\n            }\n        }\n    }\n}",
+      "tags": [
+        "security",
+        "authentication",
+        "cascading",
+        "auth-state",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-security-antiforgery",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "CSRF Protection with Antiforgery Tokens",
+      "description": ".NET 10 automatic CSRF protection for forms. Blazor Server automatically validates antiforgery tokens for enhanced security.",
+      "code": "@* Antiforgery is automatic in .NET 10 Blazor Server forms *@\n<EditForm Model=\"@model\" OnValidSubmit=\"@HandleSubmit\">\n    @* Antiforgery token is automatically included *@\n\n    <InputText @bind-Value=\"model.Username\" />\n    <button type=\"submit\">Submit</button>\n</EditForm>\n\n@* For manual API calls with antiforgery: *@\n@inject IAntiforgery Antiforgery\n@inject HttpContext HttpContext\n\n@code {\n    private async Task MakeSecureApiCall()\n    {\n        // Get antiforgery token\n        var tokens = Antiforgery.GetAndStoreTokens(HttpContext);\n\n        using var request = new HttpRequestMessage(HttpMethod.Post, \"api/secure\");\n        request.Headers.Add(\"RequestVerificationToken\", tokens.RequestToken);\n\n        var response = await Http.SendAsync(request);\n        response.EnsureSuccessStatusCode();\n    }\n}\n\n// In Program.cs, antiforgery is enabled by default:\n// builder.Services.AddAntiforgery();\n//\n// For API controllers, validate with [ValidateAntiForgeryToken]\n// Or use [AutoValidateAntiforgeryToken] at controller level",
+      "tags": [
+        "security",
+        "csrf",
+        "antiforgery",
+        "protection",
+        "blazor-server",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.89,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-security-secrets",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Secure Configuration and Secrets",
+      "description": "Best practice: Never expose secrets in Blazor components. Use server-side configuration, Azure Key Vault, or User Secrets for sensitive data.",
+      "code": "@inject IConfiguration Configuration\n@inject ISecretService SecretService\n\n@code {\n    private async Task CallSecureApi()\n    {\n        // ❌ NEVER do this in Blazor components:\n        // var apiKey = \"sk_live_abc123...\"; // Exposed to client!\n\n        // ✅ DO: Get secrets server-side only\n        var apiKey = await SecretService.GetApiKeyAsync();\n\n        // ✅ DO: Use configuration that's not sent to client\n        var apiUrl = Configuration[\"Api:SecureEndpoint\"];\n\n        // Make API call server-side\n        var response = await CallApiWithKeyAsync(apiUrl, apiKey);\n    }\n}\n\n// ISecretService implementation (server-side only):\n// public class SecretService : ISecretService\n// {\n//     private readonly IConfiguration _config;\n//\n//     public SecretService(IConfiguration config)\n//     {\n//         _config = config;\n//     }\n//\n//     public Task<string> GetApiKeyAsync()\n//     {\n//         // Get from environment variable, Azure Key Vault, etc.\n//         return Task.FromResult(_config[\"Secrets:ApiKey\"] ?? \"\");\n//     }\n// }\n//\n// In appsettings.json (not in wwwroot!):\n// {\n//   \"Secrets\": {\n//     \"ApiKey\": \"\" // Leave empty, use User Secrets or env vars\n//   }\n// }",
+      "tags": [
+        "security",
+        "secrets",
+        "configuration",
+        "api-keys",
+        "blazor-server",
+        "best-practice"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.96,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-state-cascading-value",
+      "category": "state-management",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Cascading Values for State",
+      "description": "Share state across component hierarchy using CascadingValue",
+      "code": "// In parent component or layout\n<CascadingValue Value=\"@currentUser\">\n    @Body\n</CascadingValue>\n\n@code {\n    private User currentUser = new();\n}\n\n// In child component\n@code {\n    [CascadingParameter]\n    public User CurrentUser { get; set; }\n}",
+      "tags": [
+        "state-management",
+        "cascading-value",
+        "blazor-server"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.85,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-state-event-callback",
+      "category": "state-management",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Child-to-Parent Communication",
+      "description": "Use EventCallback for child component to notify parent",
+      "code": "// In child component\n@code {\n    [Parameter]\n    public EventCallback<string> OnValueChanged { get; set; }\n\n    private async Task HandleChange(string newValue)\n    {\n        await OnValueChanged.InvokeAsync(newValue);\n    }\n}\n\n// In parent component\n<ChildComponent OnValueChanged=\"@HandleValueChanged\" />\n\n@code {\n    private void HandleValueChanged(string value)\n    {\n        // Handle the change\n    }\n}",
+      "tags": [
+        "state-management",
+        "event-callback",
+        "blazor-server",
+        "component-communication"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.9,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-state-cascading-value-net10",
+      "category": "state-management",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Cascading Values for State Distribution (.NET 10)",
+      "description": "Use CascadingValue and CascadingParameter to share state down component hierarchies without prop drilling. Ideal for distributing app-wide state like authentication, theme, or user preferences across nested components.",
+      "code": "// App.razor - Root level cascading value\n<CascadingValue Value=\"@appState\">\n    <Router AppAssembly=\"@typeof(App).Assembly\">\n        <Found Context=\"routeData\">\n            <RouteView RouteData=\"@routeData\" />\n        </Found>\n    </Router>\n</CascadingValue>\n\n@code {\n    private AppState appState = new();\n}\n\n// Child component consuming cascading value\n@code {\n    [CascadingParameter]\n    public AppState AppState { get; set; } = default!;\n    \n    protected override void OnInitialized()\n    {\n        // Access app-wide state without explicit parameter passing\n        var currentUser = AppState.CurrentUser;\n    }\n}",
+      "tags": [
+        "state",
+        "cascading",
+        "context",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.8,
+      "created_at": "2025-10-25T14:41:43.237716100Z",
+      "updated_at": "2025-10-25T14:41:43.237717900Z"
+    },
+    {
+      "id": "blazor-state-service-container-net10",
+      "category": "state-management",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Service-Based State Container with DI (.NET 10)",
+      "description": "Create a service-based state container using DI with event notifications for component reactivity. Register as Scoped for circuit-level state or Singleton for app-wide state. Always implement IDisposable to prevent memory leaks.",
+      "code": "// Program.cs - Register scoped state service\nbuilder.Services.AddScoped<AppStateService>();\n\n// AppStateService.cs - Singleton/Scoped state container\npublic class AppStateService\n{\n    private AppState _state = new();\n    public event Action? OnStateChanged;\n    \n    public AppState State => _state;\n    \n    public void UpdateState(AppState newState)\n    {\n        _state = newState;\n        NotifyStateChanged();\n    }\n    \n    private void NotifyStateChanged() => OnStateChanged?.Invoke();\n}\n\n// Component.razor - Subscribe to state changes\n@implements IDisposable\n@inject AppStateService StateService\n\n@code {\n    protected override void OnInitialized()\n    {\n        StateService.OnStateChanged += StateHasChanged;\n    }\n    \n    private async Task UpdateData()\n    {\n        var newState = await FetchData();\n        StateService.UpdateState(newState);\n    }\n    \n    public void Dispose()\n    {\n        StateService.OnStateChanged -= StateHasChanged;\n    }\n}",
+      "tags": [
+        "state",
+        "di",
+        "service",
+        "events",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.8,
+      "created_at": "2025-10-25T14:41:53.730712400Z",
+      "updated_at": "2025-10-25T14:41:53.730714400Z"
+    }
+  ]
+}
