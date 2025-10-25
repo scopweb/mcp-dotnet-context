@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "dotnet-context": {
+      "command": "C:\\MCPs\\clone\\mcp-dotnet-context-rust\\target\\release\\mcp-dotnet-context.exe",
+      "args": [],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-lifecycle-oninit",
+      "category": "patterns",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Component Initialization Pattern",
+      "description": "Proper way to initialize Blazor Server components with async operations",
+      "code": "@code {\n    protected override async Task OnInitializedAsync()\n    {\n        // Load data from service\n        await LoadDataAsync();\n        \n        // Always call base\n        await base.OnInitializedAsync();\n    }\n    \n    private async Task LoadDataAsync()\n    {\n        // Use injected service\n        data = await DataService.GetDataAsync();\n    }\n}",
+      "tags": ["lifecycle", "initialization", "async", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.95,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-params",
+      "category": "patterns",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Parameter Change Handling",
+      "description": "React to parameter changes in Blazor components",
+      "code": "@code {\n    [Parameter]\n    public int ItemId { get; set; }\n    \n    protected override async Task OnParametersSetAsync()\n    {\n        if (ItemId != previousItemId)\n        {\n            previousItemId = ItemId;\n            await ReloadDataAsync();\n        }\n        \n        await base.OnParametersSetAsync();\n    }\n}",
+      "tags": ["lifecycle", "parameters", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.90,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    }
+  ]
+}

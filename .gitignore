@@ -1,0 +1,59 @@
+# Rust Build
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo.lock
+# Uncomment for libraries (keep for binaries)
+# Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.fleet/
+.vscode-test/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Project specific
+/data/cache/
+*.log
+/data/patterns/.backup/
+
+# Config (may contain secrets)
+config.toml
+*.local.toml
+
+# Testing
+/test-projects/
+/examples/output/
+
+# Documentation build
+/book/
+/mdbook/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Visual Studio
+.vs/
+.claude/

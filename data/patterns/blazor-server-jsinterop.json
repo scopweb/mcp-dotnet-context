@@ -1,0 +1,60 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-jsinterop-basic",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Basic JavaScript Interop Pattern",
+      "description": "Call JavaScript functions from Blazor using IJSRuntime. Use InvokeVoidAsync for functions without return values and InvokeAsync<T> for functions that return data.",
+      "code": "@inject IJSRuntime JS\n\n<button @onclick=\"ShowAlert\">Show Alert</button>\n<button @onclick=\"GetWindowSize\">Get Window Size</button>\n\n@code {\n    private async Task ShowAlert()\n    {\n        // Call JS function without return value\n        await JS.InvokeVoidAsync(\"alert\", \"Hello from Blazor!\");\n    }\n\n    private async Task GetWindowSize()\n    {\n        // Call JS function with return value\n        var width = await JS.InvokeAsync<int>(\"getWindowWidth\");\n        var height = await JS.InvokeAsync<int>(\"getWindowHeight\");\n\n        Console.WriteLine($\"Window: {width}x{height}\");\n    }\n}\n\n@* In wwwroot/js/interop.js: *@\n@* window.getWindowWidth = () => window.innerWidth; *@\n@* window.getWindowHeight = () => window.innerHeight; *@",
+      "tags": ["jsinterop", "javascript", "interop", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.90,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-jsinterop-dotnetref",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Calling .NET from JavaScript",
+      "description": "Pass DotNetObjectReference to JavaScript to allow JS to call back into .NET methods. Use [JSInvokable] attribute on methods that can be called from JS.",
+      "code": "@inject IJSRuntime JS\n@implements IDisposable\n\n<button @onclick=\"StartTimer\">Start Timer</button>\n<p>Count: @count</p>\n\n@code {\n    private DotNetObjectReference<TimerComponent>? dotNetRef;\n    private int count = 0;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender)\n        {\n            dotNetRef = DotNetObjectReference.Create(this);\n            await JS.InvokeVoidAsync(\"initializeTimer\", dotNetRef);\n        }\n    }\n\n    private async Task StartTimer()\n    {\n        await JS.InvokeVoidAsync(\"startTimer\");\n    }\n\n    [JSInvokable]\n    public void OnTimerTick()\n    {\n        count++;\n        StateHasChanged(); // Must call to update UI\n    }\n\n    public void Dispose()\n    {\n        dotNetRef?.Dispose();\n    }\n}\n\n@* In wwwroot/js/interop.js: *@\n@* let dotNetHelper;\n   window.initializeTimer = (helper) => { dotNetHelper = helper; };\n   window.startTimer = () => {\n     setInterval(() => {\n       dotNetHelper.invokeMethodAsync('OnTimerTick');\n     }, 1000);\n   }; *@",
+      "tags": ["jsinterop", "dotnetref", "callback", "jsinvokable", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-jsinterop-isolation",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "JavaScript Isolation Modules",
+      "description": ".NET 10 best practice: Use ES6 modules with IJSObjectReference for isolated, component-specific JavaScript. Prevents global namespace pollution and enables tree-shaking.",
+      "code": "@inject IJSRuntime JS\n@implements IAsyncDisposable\n\n@code {\n    private IJSObjectReference? module;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender)\n        {\n            // Load ES6 module\n            module = await JS.InvokeAsync<IJSObjectReference>(\n                \"import\",\n                \"./Components/MyComponent.razor.js\");\n\n            // Call module function\n            await module.InvokeVoidAsync(\"initialize\", myElement);\n        }\n    }\n\n    private async Task DoSomething()\n    {\n        if (module != null)\n        {\n            var result = await module.InvokeAsync<string>(\"processData\", data);\n        }\n    }\n\n    public async ValueTask DisposeAsync()\n    {\n        if (module != null)\n        {\n            await module.DisposeAsync();\n        }\n    }\n}\n\n@* In Components/MyComponent.razor.js: *@\n@* export function initialize(element) {\n     // Component-specific JS code\n   }\n   export function processData(data) {\n     return data.toUpperCase();\n   } *@",
+      "tags": ["jsinterop", "modules", "isolation", "es6", "blazor-server", "best-practice"],
+      "usage_count": 0,
+      "relevance_score": 0.94,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-jsinterop-elementref",
+      "category": "javascript-interop",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "ElementReference for DOM Manipulation",
+      "description": "Use ElementReference with @ref to pass specific DOM elements to JavaScript. Only available after OnAfterRender when the element is actually rendered.",
+      "code": "@inject IJSRuntime JS\n\n<div @ref=\"chartContainer\" class=\"chart\"></div>\n<input @ref=\"inputElement\" @oninput=\"OnInput\" />\n\n@code {\n    private ElementReference chartContainer;\n    private ElementReference inputElement;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender)\n        {\n            // Element reference is now valid\n            await JS.InvokeVoidAsync(\"initializeChart\", chartContainer);\n\n            // Focus the input element\n            await JS.InvokeVoidAsync(\"focusElement\", inputElement);\n        }\n    }\n\n    private async Task OnInput(ChangeEventArgs e)\n    {\n        // Process input\n        await JS.InvokeVoidAsync(\"highlightElement\", inputElement);\n    }\n}\n\n@* In wwwroot/js/interop.js: *@\n@* window.initializeChart = (element) => {\n     // Use the actual DOM element\n     new Chart(element, config);\n   };\n   window.focusElement = (element) => element.focus();\n   window.highlightElement = (element) => {\n     element.classList.add('highlight');\n   }; *@",
+      "tags": ["jsinterop", "elementreference", "dom", "ref", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.89,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    }
+  ]
+}

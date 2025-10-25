@@ -1,0 +1,32 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-state-cascading-value",
+      "category": "state-management",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Cascading Values for State",
+      "description": "Share state across component hierarchy using CascadingValue",
+      "code": "// In parent component or layout\n<CascadingValue Value=\"@currentUser\">\n    @Body\n</CascadingValue>\n\n@code {\n    private User currentUser = new();\n}\n\n// In child component\n@code {\n    [CascadingParameter]\n    public User CurrentUser { get; set; }\n}",
+      "tags": ["state-management", "cascading-value", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.85,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-state-event-callback",
+      "category": "state-management",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Child-to-Parent Communication",
+      "description": "Use EventCallback for child component to notify parent",
+      "code": "// In child component\n@code {\n    [Parameter]\n    public EventCallback<string> OnValueChanged { get; set; }\n\n    private async Task HandleChange(string newValue)\n    {\n        await OnValueChanged.InvokeAsync(newValue);\n    }\n}\n\n// In parent component\n<ChildComponent OnValueChanged=\"@HandleValueChanged\" />\n\n@code {\n    private void HandleValueChanged(string value)\n    {\n        // Handle the change\n    }\n}",
+      "tags": ["state-management", "event-callback", "blazor-server", "component-communication"],
+      "usage_count": 0,
+      "relevance_score": 0.90,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    }
+  ]
+}

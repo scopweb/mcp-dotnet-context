@@ -1,0 +1,32 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-di-service-injection",
+      "category": "dependency-injection",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Service Injection in Components",
+      "description": "Proper way to inject services into Blazor Server components",
+      "code": "@inject IDataService DataService\n@inject ILogger<MyComponent> Logger\n\n@code {\n    protected override async Task OnInitializedAsync()\n    {\n        try\n        {\n            var data = await DataService.GetDataAsync();\n            Logger.LogInformation(\"Data loaded successfully\");\n        }\n        catch (Exception ex)\n        {\n            Logger.LogError(ex, \"Error loading data\");\n        }\n    }\n}",
+      "tags": ["dependency-injection", "services", "blazor-server", "logging"],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-di-scoped-service",
+      "category": "dependency-injection",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Register Scoped Service",
+      "description": "Register a scoped service for Blazor Server (one instance per circuit)",
+      "code": "// In Program.cs\nbuilder.Services.AddScoped<IDataService, DataService>();\nbuilder.Services.AddScoped<IAuthService, AuthService>();\n\n// Services are shared across components in the same circuit\n// but isolated between different users",
+      "tags": ["dependency-injection", "program-cs", "blazor-server", "scoped"],
+      "usage_count": 0,
+      "relevance_score": 0.88,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    }
+  ]
+}

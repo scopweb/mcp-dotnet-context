@@ -1,0 +1,60 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-security-authorize",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Component Authorization with [Authorize]",
+      "description": "Use [Authorize] attribute to protect components and require authentication. Supports role-based and policy-based authorization out of the box.",
+      "code": "@attribute [Authorize]\n@* Or with roles: *@\n@* @attribute [Authorize(Roles = \"Admin,Manager\")] *@\n@* Or with policy: *@\n@* @attribute [Authorize(Policy = \"RequireAdminRole\")] *@\n\n@inject AuthenticationStateProvider AuthStateProvider\n\n<h3>Protected Component</h3>\n\n<AuthorizeView Roles=\"Admin\">\n    <Authorized>\n        <p>Welcome, admin @context.User.Identity?.Name!</p>\n        <AdminPanel />\n    </Authorized>\n    <NotAuthorized>\n        <p>You don't have admin access.</p>\n    </NotAuthorized>\n</AuthorizeView>\n\n@code {\n    private ClaimsPrincipal? user;\n\n    protected override async Task OnInitializedAsync()\n    {\n        var authState = await AuthStateProvider.GetAuthenticationStateAsync();\n        user = authState.User;\n\n        if (user?.Identity?.IsAuthenticated ?? false)\n        {\n            // User is authenticated\n            var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value);\n        }\n    }\n}",
+      "tags": ["security", "authorization", "authentication", "authorize", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.94,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-security-cascading-auth",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Cascading Authentication State",
+      "description": "Use CascadingAuthenticationState to make user authentication state available throughout the component hierarchy without manual injection.",
+      "code": "@* In App.razor or MainLayout.razor: *@\n<CascadingAuthenticationState>\n    <Router AppAssembly=\"@typeof(App).Assembly\">\n        <Found Context=\"routeData\">\n            <AuthorizeRouteView RouteData=\"@routeData\" DefaultLayout=\"@typeof(MainLayout)\">\n                <NotAuthorized>\n                    @if (context.User.Identity?.IsAuthenticated != true)\n                    {\n                        <RedirectToLogin />\n                    }\n                    else\n                    {\n                        <p>You are not authorized to access this resource.</p>\n                    }\n                </NotAuthorized>\n            </AuthorizeRouteView>\n        </Found>\n    </Router>\n</CascadingAuthenticationState>\n\n@* In any child component: *@\n@code {\n    [CascadingParameter]\n    private Task<AuthenticationState>? AuthStateTask { get; set; }\n\n    protected override async Task OnInitializedAsync()\n    {\n        if (AuthStateTask != null)\n        {\n            var authState = await AuthStateTask;\n            var user = authState.User;\n\n            if (user.Identity?.IsAuthenticated ?? false)\n            {\n                // Access user claims\n                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;\n                var email = user.FindFirst(ClaimTypes.Email)?.Value;\n            }\n        }\n    }\n}",
+      "tags": ["security", "authentication", "cascading", "auth-state", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-security-antiforgery",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "CSRF Protection with Antiforgery Tokens",
+      "description": ".NET 10 automatic CSRF protection for forms. Blazor Server automatically validates antiforgery tokens for enhanced security.",
+      "code": "@* Antiforgery is automatic in .NET 10 Blazor Server forms *@\n<EditForm Model=\"@model\" OnValidSubmit=\"@HandleSubmit\">\n    @* Antiforgery token is automatically included *@\n\n    <InputText @bind-Value=\"model.Username\" />\n    <button type=\"submit\">Submit</button>\n</EditForm>\n\n@* For manual API calls with antiforgery: *@\n@inject IAntiforgery Antiforgery\n@inject HttpContext HttpContext\n\n@code {\n    private async Task MakeSecureApiCall()\n    {\n        // Get antiforgery token\n        var tokens = Antiforgery.GetAndStoreTokens(HttpContext);\n\n        using var request = new HttpRequestMessage(HttpMethod.Post, \"api/secure\");\n        request.Headers.Add(\"RequestVerificationToken\", tokens.RequestToken);\n\n        var response = await Http.SendAsync(request);\n        response.EnsureSuccessStatusCode();\n    }\n}\n\n// In Program.cs, antiforgery is enabled by default:\n// builder.Services.AddAntiforgery();\n//\n// For API controllers, validate with [ValidateAntiForgeryToken]\n// Or use [AutoValidateAntiforgeryToken] at controller level",
+      "tags": ["security", "csrf", "antiforgery", "protection", "blazor-server", "net10"],
+      "usage_count": 0,
+      "relevance_score": 0.89,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-security-secrets",
+      "category": "security",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Secure Configuration and Secrets",
+      "description": "Best practice: Never expose secrets in Blazor components. Use server-side configuration, Azure Key Vault, or User Secrets for sensitive data.",
+      "code": "@inject IConfiguration Configuration\n@inject ISecretService SecretService\n\n@code {\n    private async Task CallSecureApi()\n    {\n        // ❌ NEVER do this in Blazor components:\n        // var apiKey = \"sk_live_abc123...\"; // Exposed to client!\n\n        // ✅ DO: Get secrets server-side only\n        var apiKey = await SecretService.GetApiKeyAsync();\n\n        // ✅ DO: Use configuration that's not sent to client\n        var apiUrl = Configuration[\"Api:SecureEndpoint\"];\n\n        // Make API call server-side\n        var response = await CallApiWithKeyAsync(apiUrl, apiKey);\n    }\n}\n\n// ISecretService implementation (server-side only):\n// public class SecretService : ISecretService\n// {\n//     private readonly IConfiguration _config;\n//\n//     public SecretService(IConfiguration config)\n//     {\n//         _config = config;\n//     }\n//\n//     public Task<string> GetApiKeyAsync()\n//     {\n//         // Get from environment variable, Azure Key Vault, etc.\n//         return Task.FromResult(_config[\"Secrets:ApiKey\"] ?? \"\");\n//     }\n// }\n//\n// In appsettings.json (not in wwwroot!):\n// {\n//   \"Secrets\": {\n//     \"ApiKey\": \"\" // Leave empty, use User Secrets or env vars\n//   }\n// }",
+      "tags": ["security", "secrets", "configuration", "api-keys", "blazor-server", "best-practice"],
+      "usage_count": 0,
+      "relevance_score": 0.96,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    }
+  ]
+}

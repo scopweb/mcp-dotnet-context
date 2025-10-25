@@ -1,0 +1,60 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-lifecycle-afterrender",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "OnAfterRender for DOM Manipulation",
+      "description": "Use OnAfterRenderAsync for JavaScript interop and DOM manipulation after the component has rendered. Use firstRender parameter to run initialization only once.",
+      "code": "@inject IJSRuntime JS\n\n@code {\n    private ElementReference myElement;\n    private bool isInitialized = false;\n\n    protected override async Task OnAfterRenderAsync(bool firstRender)\n    {\n        if (firstRender && !isInitialized)\n        {\n            // Only run once on first render\n            await JS.InvokeVoidAsync(\"initializeComponent\", myElement);\n            isInitialized = true;\n        }\n\n        await base.OnAfterRenderAsync(firstRender);\n    }\n}",
+      "tags": ["lifecycle", "afterrender", "jsinterop", "dom", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.92,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-statehaschanged",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "StateHasChanged Best Practice",
+      "description": "Properly use StateHasChanged to trigger re-renders. Avoid calling it unnecessarily as it enqueues a render. Note that EventCallback automatically calls StateHasChanged.",
+      "code": "@code {\n    private string status = \"Loading...\";\n    private bool isProcessing = false;\n\n    protected override async Task OnInitializedAsync()\n    {\n        // Load initial data\n        await LoadDataAsync();\n    }\n\n    private async Task LoadDataAsync()\n    {\n        isProcessing = true;\n        // StateHasChanged is NOT needed here if called from EventCallback\n        // But needed for background tasks\n        StateHasChanged();\n\n        try\n        {\n            await Task.Delay(1000); // Simulate API call\n            status = \"Loaded\";\n        }\n        finally\n        {\n            isProcessing = false;\n            StateHasChanged(); // Trigger re-render after async operation\n        }\n    }\n\n    private async Task HandleClick()\n    {\n        // EventCallback automatically calls StateHasChanged\n        // No need to call it manually here\n        await LoadDataAsync();\n    }\n}",
+      "tags": ["lifecycle", "statehaschanged", "rendering", "blazor-server", "best-practice"],
+      "usage_count": 0,
+      "relevance_score": 0.94,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-dispose",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Proper Resource Disposal",
+      "description": "Implement IDisposable to clean up resources, cancel pending async operations, and unsubscribe from events. Critical for preventing memory leaks in Blazor Server circuits.",
+      "code": "@implements IDisposable\n@inject HttpClient Http\n\n@code {\n    private CancellationTokenSource? cts;\n    private Timer? timer;\n\n    protected override async Task OnInitializedAsync()\n    {\n        cts = new CancellationTokenSource();\n\n        // Use cancellation token for async operations\n        await LoadDataAsync(cts.Token);\n\n        // Setup timer with disposal\n        timer = new Timer(OnTimerElapsed, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));\n    }\n\n    private async Task LoadDataAsync(CancellationToken cancellationToken)\n    {\n        try\n        {\n            var data = await Http.GetFromJsonAsync<MyData>(\"api/data\", cancellationToken);\n            // Process data\n        }\n        catch (OperationCanceledException)\n        {\n            // Handle cancellation gracefully\n        }\n    }\n\n    private void OnTimerElapsed(object? state)\n    {\n        // Timer callback\n        InvokeAsync(StateHasChanged);\n    }\n\n    public void Dispose()\n    {\n        // Cancel pending operations\n        cts?.Cancel();\n        cts?.Dispose();\n\n        // Dispose timer\n        timer?.Dispose();\n    }\n}",
+      "tags": ["lifecycle", "dispose", "cleanup", "cancellation", "memory-leak", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.96,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-lifecycle-setparametersasync",
+      "category": "lifecycle",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "SetParametersAsync for Advanced Parameter Handling",
+      "description": "Override SetParametersAsync for advanced scenarios where you need to intercept and process parameters before the component lifecycle continues. Useful for validation and transformation.",
+      "code": "@code {\n    [Parameter]\n    public int ItemId { get; set; }\n\n    private int previousItemId;\n    private bool isLoading;\n\n    public override async Task SetParametersAsync(ParameterView parameters)\n    {\n        // Get the new parameter value before setting\n        var newItemId = parameters.GetValueOrDefault<int>(nameof(ItemId));\n\n        // Check if parameter actually changed\n        if (newItemId != previousItemId && newItemId != default)\n        {\n            isLoading = true;\n            StateHasChanged();\n\n            // Set parameters (calls OnParametersSet internally)\n            await base.SetParametersAsync(parameters);\n\n            // Reload data for new item\n            await LoadItemDataAsync(newItemId);\n\n            previousItemId = newItemId;\n            isLoading = false;\n            StateHasChanged();\n        }\n        else\n        {\n            await base.SetParametersAsync(parameters);\n        }\n    }\n\n    private async Task LoadItemDataAsync(int itemId)\n    {\n        // Load data specific to this item\n        await Task.Delay(500);\n    }\n}",
+      "tags": ["lifecycle", "parameters", "setparameters", "advanced", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.88,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    }
+  ]
+}

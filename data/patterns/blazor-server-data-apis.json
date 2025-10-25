@@ -1,0 +1,60 @@
+{
+  "patterns": [
+    {
+      "id": "blazor-data-httpclient",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "HttpClient Best Practice for APIs",
+      "description": "Use injected HttpClient with proper error handling, cancellation tokens, and retry policies. Configure base address and default headers in Program.cs for Blazor Server.",
+      "code": "@inject HttpClient Http\n@inject ILogger<MyComponent> Logger\n\n@code {\n    private List<WeatherForecast>? forecasts;\n    private string? errorMessage;\n    private bool isLoading;\n\n    protected override async Task OnInitializedAsync()\n    {\n        await LoadDataAsync();\n    }\n\n    private async Task LoadDataAsync()\n    {\n        isLoading = true;\n        errorMessage = null;\n\n        try\n        {\n            // Use GetFromJsonAsync for automatic deserialization\n            forecasts = await Http.GetFromJsonAsync<List<WeatherForecast>>(\n                \"api/weatherforecast\");\n        }\n        catch (HttpRequestException ex)\n        {\n            errorMessage = $\"Network error: {ex.Message}\";\n            Logger.LogError(ex, \"Failed to load weather data\");\n        }\n        catch (Exception ex)\n        {\n            errorMessage = \"An unexpected error occurred\";\n            Logger.LogError(ex, \"Unexpected error loading data\");\n        }\n        finally\n        {\n            isLoading = false;\n        }\n    }\n}\n\n// In Program.cs:\n// builder.Services.AddHttpClient<MyService>(client =>\n// {\n//     client.BaseAddress = new Uri(\"https://api.example.com\");\n//     client.DefaultRequestHeaders.Add(\"User-Agent\", \"MyApp/1.0\");\n// });\n//",
+      "tags": ["data-access", "httpclient", "api", "error-handling", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.93,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-data-streaming",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Streaming Data with IAsyncEnumerable",
+      "description": ".NET 10 feature: Use IAsyncEnumerable to stream data progressively from APIs. Improves perceived performance and memory usage for large datasets.",
+      "code": "@inject IDataService DataService\n\n<div>\n    @foreach (var item in items)\n    {\n        <div>@item.Name</div>\n    }\n    @if (isLoading)\n    {\n        <p>Loading more...</p>\n    }\n</div>\n\n@code {\n    private List<DataItem> items = new();\n    private bool isLoading = true;\n\n    protected override async Task OnInitializedAsync()\n    {\n        await LoadDataStreamAsync();\n    }\n\n    private async Task LoadDataStreamAsync()\n    {\n        // Stream data as it arrives\n        await foreach (var item in DataService.GetItemsAsync())\n        {\n            items.Add(item);\n\n            // Update UI every 10 items\n            if (items.Count % 10 == 0)\n            {\n                StateHasChanged();\n                await Task.Delay(1); // Yield to UI thread\n            }\n        }\n\n        isLoading = false;\n        StateHasChanged();\n    }\n}\n\n// In IDataService:\n// public async IAsyncEnumerable<DataItem> GetItemsAsync(\n//     [EnumeratorCancellation] CancellationToken cancellationToken = default)\n// {\n//     await foreach (var item in FetchFromApiAsync(cancellationToken))\n//     {\n//         yield return item;\n//     }\n// }",
+      "tags": ["data-access", "streaming", "asyncenumerable", "performance", "blazor-server", "net10"],
+      "usage_count": 0,
+      "relevance_score": 0.91,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-data-circuit-state",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Circuit State Persistence",
+      "description": ".NET 10 feature: Persist important state across circuit reconnections. Prevents data loss when Blazor Server circuit is temporarily disconnected.",
+      "code": "@using Microsoft.AspNetCore.Components.Server.Circuits\n@inject CircuitHandler CircuitHandler\n@inject ILogger<MyComponent> Logger\n\n@code {\n    private FormData formData = new();\n    private bool isDirty;\n\n    protected override void OnInitialized()\n    {\n        // Restore state if available\n        if (CircuitHandler is PersistentCircuitHandler persistentHandler)\n        {\n            formData = persistentHandler.GetState<FormData>(\"formData\") ?? new();\n        }\n    }\n\n    private void OnInputChanged()\n    {\n        isDirty = true;\n\n        // Persist state for reconnection\n        if (CircuitHandler is PersistentCircuitHandler persistentHandler)\n        {\n            persistentHandler.SetState(\"formData\", formData);\n        }\n    }\n\n    private async Task SaveForm()\n    {\n        try\n        {\n            await SaveToApiAsync(formData);\n            isDirty = false;\n\n            // Clear persisted state after successful save\n            if (CircuitHandler is PersistentCircuitHandler persistentHandler)\n            {\n                persistentHandler.ClearState(\"formData\");\n            }\n        }\n        catch (Exception ex)\n        {\n            Logger.LogError(ex, \"Failed to save form\");\n        }\n    }\n}\n\n// Register in Program.cs:\n// builder.Services.AddScoped<CircuitHandler, PersistentCircuitHandler>();",
+      "tags": ["data-access", "state", "persistence", "circuit", "reconnection", "blazor-server", "net10"],
+      "usage_count": 0,
+      "relevance_score": 0.88,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    },
+    {
+      "id": "blazor-data-form-validation",
+      "category": "data-access",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "EditForm with Data Annotations",
+      "description": "Use EditForm with EditContext and DataAnnotationsValidator for robust form validation. Supports client-side validation without JavaScript.",
+      "code": "@using System.ComponentModel.DataAnnotations\n\n<EditForm Model=\"@model\" OnValidSubmit=\"@HandleValidSubmit\">\n    <DataAnnotationsValidator />\n    <ValidationSummary />\n\n    <div class=\"form-group\">\n        <label>Name:</label>\n        <InputText @bind-Value=\"model.Name\" class=\"form-control\" />\n        <ValidationMessage For=\"@(() => model.Name)\" />\n    </div>\n\n    <div class=\"form-group\">\n        <label>Email:</label>\n        <InputText @bind-Value=\"model.Email\" class=\"form-control\" />\n        <ValidationMessage For=\"@(() => model.Email)\" />\n    </div>\n\n    <div class=\"form-group\">\n        <label>Age:</label>\n        <InputNumber @bind-Value=\"model.Age\" class=\"form-control\" />\n        <ValidationMessage For=\"@(() => model.Age)\" />\n    </div>\n\n    <button type=\"submit\" class=\"btn btn-primary\" disabled=\"@isSubmitting\">\n        @(isSubmitting ? \"Saving...\" : \"Submit\")\n    </button>\n</EditForm>\n\n@code {\n    private PersonModel model = new();\n    private bool isSubmitting;\n\n    private async Task HandleValidSubmit()\n    {\n        isSubmitting = true;\n        try\n        {\n            await SavePersonAsync(model);\n            // Reset form\n            model = new PersonModel();\n        }\n        finally\n        {\n            isSubmitting = false;\n        }\n    }\n\n    public class PersonModel\n    {\n        [Required(ErrorMessage = \"Name is required\")]\n        [StringLength(100, MinimumLength = 2)]\n        public string Name { get; set; } = \"\";\n\n        [Required]\n        [EmailAddress(ErrorMessage = \"Invalid email format\")]\n        public string Email { get; set; } = \"\";\n\n        [Range(18, 120, ErrorMessage = \"Age must be between 18 and 120\")]\n        public int Age { get; set; }\n    }\n}",
+      "tags": ["data-access", "forms", "validation", "editform", "data-annotations", "blazor-server"],
+      "usage_count": 0,
+      "relevance_score": 0.95,
+      "created_at": "2025-10-25T00:00:00Z",
+      "updated_at": "2025-10-25T00:00:00Z"
+    }
+  ]
+}
