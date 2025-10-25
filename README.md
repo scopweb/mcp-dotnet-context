@@ -16,6 +16,8 @@
 > **Intended for research and development purposes only.** This project explores advanced context management patterns and training mechanisms for AI assistants. Use it as a reference for improving future MCP implementations or adapting the concepts to your own projects.
 >
 > 🧪 **Not recommended for production use.** Consider this an educational resource and testing ground for MCP capabilities.
+>
+> 📊 **Honest Assessment:** [Does this actually save time?](HONEST_ASSESSMENT.md) | 🛣️ **Future Plans:** [See Roadmap](ROADMAP.md)
 
 ## ✨ Features
 
@@ -240,6 +242,10 @@ echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-1
 - **[Creating MCPs with Rust](docs/CrearUnMcpConRust.md)** - Complete guide to building MCP servers
 - **[Pattern Catalog](docs/PATTERNS_CATALOG.md)** - All 27+ built-in patterns
 - **[Changelog](CHANGELOG.md)** - Version history
+
+### Project Status & Planning
+- **[Honest Assessment](HONEST_ASSESSMENT.md)** - Does this actually save time? (Truthful evaluation)
+- **[Roadmap](ROADMAP.md)** - From PoC to production-ready tool (Corporate integrations, real value)
 
 ---
 
