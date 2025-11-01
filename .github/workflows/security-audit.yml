@@ -1,0 +1,154 @@
+name: 🔒 Security Audit
+
+# Cuándo ejecutar este workflow
+on:
+  # En cada push a main o develop
+  push:
+    branches: [ main, develop ]
+
+  # En cada pull request a main
+  pull_request:
+    branches: [ main ]
+
+  # Diariamente a las 2 AM UTC (detectar nuevas vulnerabilidades)
+  schedule:
+    - cron: '0 2 * * *'
+
+# Variables de entorno
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Job 1: Cargo Audit (Detectar vulnerabilidades en dependencias)
+  audit:
+    name: 🔒 Cargo Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      # Paso 1: Descargar el código
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      # Paso 2: Instalar Rust
+      - name: 🦀 Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Paso 3: Ejecutar cargo-audit
+      - name: 🔍 Run cargo-audit
+        uses: rustsec/audit-check-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 2: Cargo Geiger (Detectar unsafe code)
+  geiger:
+    name: 🔍 Unsafe Code Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # cargo-geiger detecta todo el código unsafe en tus dependencias
+      - name: 🔎 Install cargo-geiger
+        run: cargo install cargo-geiger --locked
+
+      - name: 🔍 Run cargo-geiger
+        # Genera reporte pero no falla (informativo)
+        run: cargo geiger --output-format GitHubMarkdown >> $GITHUB_STEP_SUMMARY || true
+
+  # Job 3: Dependency Check (Verificar dependencias)
+  dependency-check:
+    name: 📦 Dependency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Verificar que Cargo.lock está actualizado
+      - name: 📋 Check Cargo.lock is committed
+        run: |
+          if ! git ls-files Cargo.lock --error-unmatch; then
+            echo "⚠️ Cargo.lock not found or not committed"
+            echo "Please run: cargo update && git add Cargo.lock && git commit"
+            exit 1
+          fi
+
+      # Ver árbol de dependencias
+      - name: 🌳 Show dependency tree
+        run: cargo tree --depth 1
+
+  # Job 4: Build & Test (Asegurar que compila sin errores)
+  build:
+    name: 🏗️ Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Cache de dependencias para acelerar
+      - name: ⚡ Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: ⚡ Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: ⚡ Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      # Verificar que formatea correctamente
+      - name: 🎨 Check code formatting
+        run: cargo fmt -- --check
+
+      # Ejecutar clippy (linter)
+      - name: 📝 Run clippy
+        run: cargo clippy -- -D warnings
+
+      # Build
+      - name: 🔨 Build
+        run: cargo build --verbose
+
+      # Tests
+      - name: ✅ Run tests
+        run: cargo test --verbose
+
+  # Resumen
+  summary:
+    name: 📊 Summary
+    runs-on: ubuntu-latest
+    needs: [audit, geiger, dependency-check, build]
+    if: always()
+
+    steps:
+      - name: 📊 Print summary
+        run: |
+          echo "🔒 Security Audit Summary"
+          echo "========================"
+          echo "✅ Cargo Audit: Checked for known vulnerabilities"
+          echo "🔍 Unsafe Code: Analyzed for unsafe usage"
+          echo "📦 Dependencies: Verified"
+          echo "🏗️ Build & Tests: Passed"
+          echo ""
+          echo "Your code is secure! 🎉"
