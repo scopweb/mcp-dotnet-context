@@ -21,6 +21,7 @@
 
 ## ✨ Features
 
+### Core Functionality
 - 🔍 **Deep .NET Analysis**: Parse .csproj, analyze C# code with tree-sitter, detect dependencies
 - 📚 **27+ Built-in Patterns**: Official Microsoft best practices for Blazor Server
   - 🔄 Lifecycle (6 patterns)
@@ -34,6 +35,13 @@
 - 🎯 **Blazor Specialized**: Context-aware suggestions for Blazor Server components
 - 🦀 **Rust Performance**: 10x faster than Python equivalents
 - 🔌 **MCP Native**: Works with Claude Desktop and other MCP clients
+
+### Security & Quality
+- 🔒 **Automated Security Scanning**: cargo-audit integration with RustSec Database (861 advisories)
+- ✅ **Zero Known Vulnerabilities**: 159 dependencies verified, 0 issues found
+- 🔍 **Unsafe Code Detection**: cargo-geiger monitoring in CI/CD
+- 📋 **Continuous Integration**: GitHub Actions workflow with security, lint, format, and test checks
+- 📊 **Code Quality**: Enforced formatting (cargo fmt) and linting (cargo clippy)
 
 ## 🦀 Why Rust?
 
@@ -246,6 +254,27 @@ echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-1
 ### Project Status & Planning
 - **[Honest Assessment](HONEST_ASSESSMENT.md)** - Does this actually save time? (Truthful evaluation)
 - **[Roadmap](ROADMAP.md)** - From PoC to production-ready tool (Corporate integrations, real value)
+- **[Security Audit](docs/SECURITY_AUDIT.md)** - How cargo-audit works and continuous scanning
+- **[Security Report](SECURITY_AUDIT_REPORT.md)** - Latest audit results: 0 vulnerabilities ✅
+
+---
+
+## 🔒 Security Status
+
+This project implements comprehensive security scanning:
+
+```
+✅ Automated dependency scanning with cargo-audit
+✅ 159 dependencies verified against 861 RustSec advisories
+✅ Zero known vulnerabilities found
+✅ Continuous monitoring on every push (GitHub Actions)
+✅ Daily security checks (2 AM UTC)
+✅ Unsafe code detection with cargo-geiger
+✅ Code quality enforcement (clippy, fmt)
+✅ Comprehensive CI/CD pipeline
+```
+
+See [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md) for detailed results.
 
 ---
 
