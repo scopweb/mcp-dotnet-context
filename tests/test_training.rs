@@ -1,8 +1,8 @@
 use anyhow::Result;
 use chrono::Utc;
-use std::fs;
-use mcp_dotnet_context::training::{TrainingManager, SearchCriteria};
+use mcp_dotnet_context::training::{SearchCriteria, TrainingManager};
 use mcp_dotnet_context::types::CodePattern;
+use std::fs;
 
 #[tokio::test]
 async fn test_load_patterns() -> Result<()> {
@@ -453,7 +453,14 @@ async fn test_statistics() -> Result<()> {
 
     assert_eq!(stats["total_patterns"], 2);
     assert_eq!(stats["total_usage"], 8);
-    assert_eq!(stats["avg_relevance"], 0.85);
+
+    // Compare with tolerance for float precision
+    let avg_relevance = stats["avg_relevance"].as_f64().unwrap();
+    assert!(
+        (avg_relevance - 0.85).abs() < 0.01,
+        "avg_relevance = {}",
+        avg_relevance
+    );
 
     let categories = stats["categories"].as_array().unwrap();
     assert_eq!(categories.len(), 2);

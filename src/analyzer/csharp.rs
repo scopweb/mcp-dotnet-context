@@ -4,10 +4,12 @@ use tree_sitter::{Node, Parser};
 
 use crate::types::{CSharpFile, ClassInfo, InterfaceInfo, MethodInfo, PropertyInfo};
 
+#[allow(dead_code)]
 pub struct CSharpAnalyzer {
     parser: Parser,
 }
 
+#[allow(dead_code)]
 impl CSharpAnalyzer {
     pub fn new() -> Result<Self> {
         let mut parser = Parser::new();
@@ -19,7 +21,9 @@ impl CSharpAnalyzer {
 
     pub fn analyze_file(&mut self, path: &Path) -> Result<CSharpFile> {
         let source = std::fs::read_to_string(path)?;
-        let tree = self.parser.parse(&source, None)
+        let tree = self
+            .parser
+            .parse(&source, None)
             .ok_or_else(|| anyhow::anyhow!("Failed to parse file"))?;
 
         let root = tree.root_node();
@@ -49,7 +53,9 @@ impl CSharpAnalyzer {
         let mut cursor = node.walk();
 
         for child in node.children(&mut cursor) {
-            if child.kind() == "namespace_declaration" || child.kind() == "file_scoped_namespace_declaration" {
+            if child.kind() == "namespace_declaration"
+                || child.kind() == "file_scoped_namespace_declaration"
+            {
                 // Find the name node
                 let mut child_cursor = child.walk();
                 for name_child in child.children(&mut child_cursor) {
@@ -71,7 +77,8 @@ impl CSharpAnalyzer {
             if child.kind() == "using_directive" {
                 let mut child_cursor = child.walk();
                 for using_child in child.children(&mut child_cursor) {
-                    if using_child.kind() == "qualified_name" || using_child.kind() == "identifier" {
+                    if using_child.kind() == "qualified_name" || using_child.kind() == "identifier"
+                    {
                         if let Ok(text) = using_child.utf8_text(source.as_bytes()) {
                             usings.push(text.to_string());
                         }

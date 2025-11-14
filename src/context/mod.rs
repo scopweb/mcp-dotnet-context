@@ -1,17 +1,16 @@
+use crate::training::{SearchCriteria, TrainingManager};
+use crate::types::{AnalysisResult, CodePattern, DotNetProject, SeverityLevel, Suggestion};
 use anyhow::Result;
-use crate::training::{TrainingManager, SearchCriteria};
-use crate::types::{AnalysisResult, CodePattern, DotNetProject, Suggestion, SeverityLevel};
 
 /// Builds intelligent context for AI assistants based on project analysis
+#[derive(Default)]
 pub struct ContextBuilder {
     training_manager: Option<TrainingManager>,
 }
 
 impl ContextBuilder {
     pub fn new() -> Self {
-        Self {
-            training_manager: None,
-        }
+        Self::default()
     }
 
     /// Set the training manager for pattern retrieval
@@ -39,7 +38,9 @@ impl ContextBuilder {
         let statistics = crate::types::Statistics {
             total_files: project.files.len(),
             total_classes: project.files.iter().map(|f| f.classes.len()).sum(),
-            total_methods: project.files.iter()
+            total_methods: project
+                .files
+                .iter()
                 .flat_map(|f| &f.classes)
                 .map(|c| c.methods.len())
                 .sum(),
@@ -59,17 +60,29 @@ impl ContextBuilder {
     /// Detect framework type from project packages
     fn detect_framework(&self, project: &DotNetProject) -> String {
         // Check for Blazor Server
-        if project.packages.iter().any(|p| p.name.contains("AspNetCore.Components")) {
+        if project
+            .packages
+            .iter()
+            .any(|p| p.name.contains("AspNetCore.Components"))
+        {
             return "blazor-server".to_string();
         }
 
         // Check for ASP.NET Core
-        if project.packages.iter().any(|p| p.name.contains("AspNetCore")) {
+        if project
+            .packages
+            .iter()
+            .any(|p| p.name.contains("AspNetCore"))
+        {
             return "aspnet-core".to_string();
         }
 
         // Check for Entity Framework
-        if project.packages.iter().any(|p| p.name.contains("EntityFrameworkCore")) {
+        if project
+            .packages
+            .iter()
+            .any(|p| p.name.contains("EntityFrameworkCore"))
+        {
             return "entity-framework".to_string();
         }
 
@@ -118,7 +131,10 @@ impl ContextBuilder {
         for category in additional_categories {
             let results = manager.search_by_framework_and_category(framework, category);
             for pattern in results {
-                if !all_patterns.iter().any(|p: &CodePattern| p.id == pattern.id) {
+                if !all_patterns
+                    .iter()
+                    .any(|p: &CodePattern| p.id == pattern.id)
+                {
                     all_patterns.push(pattern.clone());
                 }
             }
@@ -135,11 +151,7 @@ impl ContextBuilder {
     }
 
     /// Generate suggestions based on project analysis
-    fn generate_suggestions(
-        &self,
-        project: &DotNetProject,
-        framework: &str,
-    ) -> Vec<Suggestion> {
+    fn generate_suggestions(&self, project: &DotNetProject, framework: &str) -> Vec<Suggestion> {
         let mut suggestions = Vec::new();
 
         // Check for Blazor-specific issues
@@ -162,13 +174,17 @@ impl ContextBuilder {
         for file in &project.files {
             for class in &file.classes {
                 // Check if inherits from ComponentBase
-                let is_component = class.base_class.as_ref()
+                let is_component = class
+                    .base_class
+                    .as_ref()
                     .map(|b| b.contains("ComponentBase"))
                     .unwrap_or(false);
 
                 if is_component {
                     // Check for synchronous OnInitialized
-                    let has_sync_init = class.methods.iter()
+                    let has_sync_init = class
+                        .methods
+                        .iter()
                         .any(|m| m.name == "OnInitialized" && !m.is_async);
 
                     if has_sync_init {
@@ -217,47 +233,59 @@ impl ContextBuilder {
     }
 
     fn check_di_patterns(&self, _project: &DotNetProject) -> Vec<Suggestion> {
-        let mut suggestions = Vec::new();
-
         // Could check for:
         // - Services that should be injected
         // - Missing DI registration
         // - Incorrect service lifetime
 
         // For now, just a placeholder
-        suggestions.push(Suggestion {
+        vec![Suggestion {
             severity: SeverityLevel::Info,
             category: "dependency-injection".to_string(),
-            message: "Consider using dependency injection for data access and external services.".to_string(),
+            message: "Consider using dependency injection for data access and external services."
+                .to_string(),
             file: None,
             line: None,
-        });
-
-        suggestions
+        }]
     }
 
     /// Build a formatted context string for AI consumption
     pub fn build_context_string(&self, analysis: &AnalysisResult) -> String {
         let mut context = String::new();
 
-        context.push_str(&format!("# .NET Project Analysis\n\n"));
+        context.push_str("# .NET Project Analysis\n\n");
         context.push_str(&format!("**Project:** {}\n", analysis.project.name));
-        context.push_str(&format!("**Framework:** {}\n", analysis.project.target_framework));
-        context.push_str(&format!("**Language:** C# {}\n\n", analysis.project.language_version));
+        context.push_str(&format!(
+            "**Framework:** {}\n",
+            analysis.project.target_framework
+        ));
+        context.push_str(&format!(
+            "**Language:** C# {}\n\n",
+            analysis.project.language_version
+        ));
 
         // Dependencies
         context.push_str("## Dependencies\n\n");
         for package in &analysis.project.packages {
             context.push_str(&format!("- {} ({})\n", package.name, package.version));
         }
-        context.push_str("\n");
+        context.push('\n');
 
         // Statistics
         context.push_str("## Project Statistics\n\n");
-        context.push_str(&format!("- Total Files: {}\n", analysis.statistics.total_files));
-        context.push_str(&format!("- Total Classes: {}\n", analysis.statistics.total_classes));
-        context.push_str(&format!("- Total Methods: {}\n", analysis.statistics.total_methods));
-        context.push_str("\n");
+        context.push_str(&format!(
+            "- Total Files: {}\n",
+            analysis.statistics.total_files
+        ));
+        context.push_str(&format!(
+            "- Total Classes: {}\n",
+            analysis.statistics.total_classes
+        ));
+        context.push_str(&format!(
+            "- Total Methods: {}\n",
+            analysis.statistics.total_methods
+        ));
+        context.push('\n');
 
         // Relevant Patterns
         if !analysis.patterns.is_empty() {
@@ -281,7 +309,10 @@ impl ContextBuilder {
                     SeverityLevel::Warning => "⚠️",
                     SeverityLevel::Info => "ℹ️",
                 };
-                context.push_str(&format!("{} **{}**: {}\n", icon, suggestion.category, suggestion.message));
+                context.push_str(&format!(
+                    "{} **{}**: {}\n",
+                    icon, suggestion.category, suggestion.message
+                ));
             }
         }
 

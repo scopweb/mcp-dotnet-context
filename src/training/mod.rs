@@ -43,7 +43,10 @@ impl TrainingManager {
         self.framework_index.clear();
 
         if !self.storage_path.exists() {
-            tracing::warn!("Pattern storage path does not exist: {:?}", self.storage_path);
+            tracing::warn!(
+                "Pattern storage path does not exist: {:?}",
+                self.storage_path
+            );
             return Ok(());
         }
 
@@ -64,21 +67,24 @@ impl TrainingManager {
         // Build indexes
         self.rebuild_indexes();
 
-        tracing::info!("Loaded {} patterns from {:?}", self.patterns.len(), self.storage_path);
+        tracing::info!(
+            "Loaded {} patterns from {:?}",
+            self.patterns.len(),
+            self.storage_path
+        );
         Ok(())
     }
 
     fn load_pattern_file(&mut self, path: &Path) -> Result<()> {
-        let content = fs::read_to_string(path)
-            .context("Failed to read pattern file")?;
+        let content = fs::read_to_string(path).context("Failed to read pattern file")?;
 
         #[derive(serde::Deserialize)]
         struct PatternFile {
             patterns: Vec<CodePattern>,
         }
 
-        let file: PatternFile = serde_json::from_str(&content)
-            .context("Failed to parse pattern JSON")?;
+        let file: PatternFile =
+            serde_json::from_str(&content).context("Failed to parse pattern JSON")?;
 
         for pattern in file.patterns {
             self.patterns.push(pattern);
@@ -95,20 +101,19 @@ impl TrainingManager {
             // Index by category
             self.category_index
                 .entry(pattern.category.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(idx);
 
             // Index by framework
             self.framework_index
                 .entry(pattern.framework.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(idx);
         }
     }
 
     pub async fn save_patterns(&self) -> Result<()> {
-        fs::create_dir_all(&self.storage_path)
-            .context("Failed to create storage directory")?;
+        fs::create_dir_all(&self.storage_path).context("Failed to create storage directory")?;
 
         // Group patterns by framework
         let mut by_framework: HashMap<String, Vec<&CodePattern>> = HashMap::new();
@@ -116,7 +121,7 @@ impl TrainingManager {
         for pattern in &self.patterns {
             by_framework
                 .entry(pattern.framework.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(pattern);
         }
 
@@ -131,14 +136,18 @@ impl TrainingManager {
             }
 
             let file = PatternFile { patterns };
-            let json = serde_json::to_string_pretty(&file)
-                .context("Failed to serialize patterns")?;
+            let json =
+                serde_json::to_string_pretty(&file).context("Failed to serialize patterns")?;
 
             fs::write(&file_path, json)
                 .context(format!("Failed to write pattern file: {:?}", file_path))?;
         }
 
-        tracing::info!("Saved {} patterns to {:?}", self.patterns.len(), self.storage_path);
+        tracing::info!(
+            "Saved {} patterns to {:?}",
+            self.patterns.len(),
+            self.storage_path
+        );
         Ok(())
     }
 
@@ -155,12 +164,12 @@ impl TrainingManager {
         // Update indexes
         self.category_index
             .entry(pattern.category)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(idx);
 
         self.framework_index
             .entry(pattern.framework)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(idx);
     }
 
@@ -253,7 +262,7 @@ impl TrainingManager {
             score += 0.05;
         }
 
-        score.min(1.0) // Cap at 1.0
+        score // No cap - allow scores to differentiate patterns
     }
 
     /// Convenience method for simple searches
@@ -277,11 +286,13 @@ impl TrainingManager {
     }
 
     /// Get patterns by ID
+    #[allow(dead_code)]
     pub fn get_pattern_by_id(&self, id: &str) -> Option<&CodePattern> {
         self.patterns.iter().find(|p| p.id == id)
     }
 
     /// Update pattern usage count
+    #[allow(dead_code)]
     pub fn increment_usage(&mut self, pattern_id: &str) -> Result<()> {
         if let Some(pattern) = self.patterns.iter_mut().find(|p| p.id == pattern_id) {
             pattern.usage_count += 1;
