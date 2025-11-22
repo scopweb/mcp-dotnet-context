@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
         .with(
             tracing_subscriber::fmt::layer()
                 .with_ansi(false) // Disable ANSI color codes
-                .with_writer(std::io::stderr) // Force stderr
+                .with_writer(std::io::stderr), // Force stderr
         )
         .init();
 

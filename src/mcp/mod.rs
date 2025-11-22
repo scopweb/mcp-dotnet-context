@@ -18,6 +18,7 @@ pub struct Server {
 /// JSON-RPC Request structure
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
+    #[allow(dead_code)]
     jsonrpc: String,
     id: Option<serde_json::Value>,
     method: String,
@@ -55,10 +56,17 @@ impl Server {
         // Load existing patterns
         match training_manager.load_patterns().await {
             Ok(_) => {
-                eprintln!("Successfully loaded {} patterns", training_manager.get_all_patterns().len());
+                eprintln!(
+                    "Successfully loaded {} patterns",
+                    training_manager.get_all_patterns().len()
+                );
             }
             Err(e) => {
-                eprintln!("Error loading patterns from {}: {}", patterns_path.display(), e);
+                eprintln!(
+                    "Error loading patterns from {}: {}",
+                    patterns_path.display(),
+                    e
+                );
                 eprintln!("Continuing with empty pattern database...");
             }
         }
@@ -91,7 +99,8 @@ impl Server {
                     match serde_json::from_str::<JsonRpcRequest>(&line) {
                         Ok(request) => {
                             // Check if this is a notification (no id field)
-                            if request.id.is_none() && request.method.starts_with("notifications/") {
+                            if request.id.is_none() && request.method.starts_with("notifications/")
+                            {
                                 eprintln!("Received notification: {}, ignoring", request.method);
                                 continue;
                             }
@@ -100,7 +109,8 @@ impl Server {
                             match serde_json::to_string(&response) {
                                 Ok(response_str) => {
                                     eprintln!("Sending response");
-                                    if let Err(e) = stdout.write_all(response_str.as_bytes()).await {
+                                    if let Err(e) = stdout.write_all(response_str.as_bytes()).await
+                                    {
                                         eprintln!("Error writing to stdout: {}", e);
                                         break;
                                     }
@@ -112,7 +122,9 @@ impl Server {
                                         eprintln!("Error flushing stdout: {}", e);
                                         break;
                                     }
-                                    eprintln!("Response sent successfully, waiting for next request...");
+                                    eprintln!(
+                                        "Response sent successfully, waiting for next request..."
+                                    );
                                 }
                                 Err(e) => {
                                     eprintln!("Error serializing response: {}", e);
@@ -155,6 +167,7 @@ impl Server {
         Ok(())
     }
 
+    #[allow(dead_code)]
     async fn send_server_info(&self, stdout: &mut tokio::io::Stdout) -> Result<()> {
         let info = serde_json::json!({
             "jsonrpc": "2.0",
@@ -346,7 +359,10 @@ impl Server {
         }))
     }
 
-    async fn handle_tool_call(&mut self, params: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
+    async fn handle_tool_call(
+        &mut self,
+        params: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value, String> {
         let params = params.ok_or("Missing params")?;
         let tool_name = params["name"].as_str().ok_or("Missing tool name")?;
         let arguments = &params["arguments"];
@@ -364,7 +380,10 @@ impl Server {
     }
 
     // Tool: analyze-project
-    async fn tool_analyze_project(&self, args: &serde_json::Value) -> Result<serde_json::Value, String> {
+    async fn tool_analyze_project(
+        &self,
+        args: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let project_path = args["project_path"]
             .as_str()
             .ok_or("Missing project_path")?;
@@ -379,8 +398,8 @@ impl Server {
             .map_err(|e| format!("Failed to analyze project: {}", e))?;
 
         // Build context with patterns
-        let context_builder = ContextBuilder::new()
-            .with_training_manager(self.training_manager.clone());
+        let context_builder =
+            ContextBuilder::new().with_training_manager(self.training_manager.clone());
 
         let analysis = context_builder
             .build_analysis(project)
@@ -400,7 +419,10 @@ impl Server {
     }
 
     // Tool: get-patterns
-    async fn tool_get_patterns(&self, args: &serde_json::Value) -> Result<serde_json::Value, String> {
+    async fn tool_get_patterns(
+        &self,
+        args: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let framework = args["framework"].as_str().ok_or("Missing framework")?;
         let category = args["category"].as_str();
 
@@ -438,7 +460,10 @@ impl Server {
                 output.push_str("\n```\n\n");
                 output.push_str(&format!("**Tags:** {}\n", pattern.tags.join(", ")));
                 output.push_str(&format!("**Usage Count:** {}\n", pattern.usage_count));
-                output.push_str(&format!("**Relevance:** {:.2}\n\n", pattern.relevance_score));
+                output.push_str(&format!(
+                    "**Relevance:** {:.2}\n\n",
+                    pattern.relevance_score
+                ));
                 output.push_str("---\n\n");
             }
         }
@@ -453,7 +478,10 @@ impl Server {
     }
 
     // Tool: search-patterns
-    async fn tool_search_patterns(&self, args: &serde_json::Value) -> Result<serde_json::Value, String> {
+    async fn tool_search_patterns(
+        &self,
+        args: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let criteria = SearchCriteria {
             query: args["query"].as_str().map(|s| s.to_string()),
             category: args["category"].as_str().map(|s| s.to_string()),
@@ -477,7 +505,10 @@ impl Server {
 
         for (pattern, score) in results {
             output.push_str(&format!("## {} (Score: {:.2})\n\n", pattern.title, score));
-            output.push_str(&format!("**Framework:** {} | **Category:** {}\n", pattern.framework, pattern.category));
+            output.push_str(&format!(
+                "**Framework:** {} | **Category:** {}\n",
+                pattern.framework, pattern.category
+            ));
             output.push_str(&format!("{}\n\n", pattern.description));
             output.push_str("```csharp\n");
             output.push_str(&pattern.code);
@@ -495,12 +526,12 @@ impl Server {
     }
 
     // Tool: train-pattern
-    async fn tool_train_pattern(&mut self, args: &serde_json::Value) -> Result<serde_json::Value, String> {
+    async fn tool_train_pattern(
+        &mut self,
+        args: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let pattern = CodePattern {
-            id: args["id"]
-                .as_str()
-                .ok_or("Missing id")?
-                .to_string(),
+            id: args["id"].as_str().ok_or("Missing id")?.to_string(),
             category: args["category"]
                 .as_str()
                 .ok_or("Missing category")?
@@ -509,22 +540,13 @@ impl Server {
                 .as_str()
                 .ok_or("Missing framework")?
                 .to_string(),
-            version: args["version"]
-                .as_str()
-                .unwrap_or("10.0")
-                .to_string(),
-            title: args["title"]
-                .as_str()
-                .ok_or("Missing title")?
-                .to_string(),
+            version: args["version"].as_str().unwrap_or("10.0").to_string(),
+            title: args["title"].as_str().ok_or("Missing title")?.to_string(),
             description: args["description"]
                 .as_str()
                 .ok_or("Missing description")?
                 .to_string(),
-            code: args["code"]
-                .as_str()
-                .ok_or("Missing code")?
-                .to_string(),
+            code: args["code"].as_str().ok_or("Missing code")?.to_string(),
             tags: args["tags"]
                 .as_array()
                 .map(|arr| {

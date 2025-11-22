@@ -8,6 +8,7 @@ use walkdir::WalkDir;
 use crate::types::{DotNetProject, NuGetPackage};
 
 pub struct ProjectAnalyzer {
+    #[allow(dead_code)]
     ignore_patterns: Vec<String>,
 }
 
@@ -52,8 +53,7 @@ impl ProjectAnalyzer {
     }
 
     fn parse_csproj(&self, path: &Path) -> Result<(String, String, Vec<NuGetPackage>)> {
-        let content = fs::read_to_string(path)
-            .context("Failed to read .csproj file")?;
+        let content = fs::read_to_string(path).context("Failed to read .csproj file")?;
 
         let mut reader = Reader::from_str(&content);
         reader.trim_text(true);
@@ -71,10 +71,10 @@ impl ProjectAnalyzer {
 
         loop {
             match reader.read_event_into(&mut buf) {
-                Ok(Event::Start(e)) => {
+                Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                     current_element = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
-                    // Parse PackageReference
+                    // Parse PackageReference (handles both <PackageReference .../> and <PackageReference ...>)
                     if current_element == "PackageReference" {
                         let mut pkg_name = String::new();
                         let mut pkg_version = String::new();
@@ -107,7 +107,11 @@ impl ProjectAnalyzer {
                     }
                 }
                 Ok(Event::Eof) => break,
-                Err(e) => anyhow::bail!("Error parsing XML at position {}: {:?}", reader.buffer_position(), e),
+                Err(e) => anyhow::bail!(
+                    "Error parsing XML at position {}: {:?}",
+                    reader.buffer_position(),
+                    e
+                ),
                 _ => {}
             }
             buf.clear();
