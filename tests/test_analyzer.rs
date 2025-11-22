@@ -1,7 +1,6 @@
 use anyhow::Result;
-use std::fs;
-use std::path::PathBuf;
 use mcp_dotnet_context::analyzer::{CSharpAnalyzer, ProjectAnalyzer};
+use std::fs;
 
 #[tokio::test]
 async fn test_csharp_analyzer() -> Result<()> {
@@ -54,7 +53,8 @@ namespace MyApp.Components
         println!("  Methods: {}", class.methods.len());
 
         for method in &class.methods {
-            println!("    - {} ({}): {}",
+            println!(
+                "    - {} ({}): {}",
                 method.name,
                 if method.is_async { "async" } else { "sync" },
                 method.return_type
@@ -70,7 +70,9 @@ namespace MyApp.Components
     // Assertions
     assert_eq!(result.namespace, Some("MyApp.Components".to_string()));
     assert!(result.usings.contains(&"System".to_string()));
-    assert!(result.usings.contains(&"Microsoft.AspNetCore.Components".to_string()));
+    assert!(result
+        .usings
+        .contains(&"Microsoft.AspNetCore.Components".to_string()));
     assert_eq!(result.classes.len(), 1);
     assert_eq!(result.classes[0].name, "WeatherForecast");
     assert_eq!(result.classes[0].properties.len(), 2);
@@ -125,7 +127,10 @@ async fn test_project_analyzer() -> Result<()> {
     assert_eq!(result.name, "TestProject");
     assert_eq!(result.target_framework, "net10.0");
     assert_eq!(result.packages.len(), 2);
-    assert!(result.packages.iter().any(|p| p.name == "Microsoft.AspNetCore.Components"));
+    assert!(result
+        .packages
+        .iter()
+        .any(|p| p.name == "Microsoft.AspNetCore.Components"));
 
     Ok(())
 }

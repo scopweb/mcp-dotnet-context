@@ -43,8 +43,8 @@ pub struct StorageConfig {
 impl Config {
     pub fn load() -> Result<Self> {
         // Try to load from config file, otherwise use defaults
-        let config_path = dirs::config_dir()
-            .map(|p| p.join("mcp-dotnet-context").join("config.toml"));
+        let config_path =
+            dirs::config_dir().map(|p| p.join("mcp-dotnet-context").join("config.toml"));
 
         if let Some(path) = config_path {
             if path.exists() {
@@ -55,8 +55,10 @@ impl Config {
 
         Ok(Self::default())
     }
+}
 
-    pub fn default() -> Self {
+impl Default for Config {
+    fn default() -> Self {
         // Try to get patterns path from environment variable first
         let base_path = std::env::var("MCP_PATTERNS_PATH")
             .ok()
@@ -106,7 +108,7 @@ impl Config {
             },
             storage: StorageConfig {
                 base_path,
-                patterns_file: "patterns".to_string(),  // Directory name, not file
+                patterns_file: "patterns".to_string(), // Directory name, not file
                 cache_dir: "cache".to_string(),
             },
         }

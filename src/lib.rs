@@ -1,5 +1,5 @@
 //! MCP .NET Context Server
-//! 
+//!
 //! A specialized Model Context Protocol (MCP) server for .NET 10 and Blazor Server
 //! that provides intelligent context analysis and code pattern training.
 
