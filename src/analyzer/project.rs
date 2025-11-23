@@ -73,9 +73,13 @@ impl ProjectAnalyzer {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(e)) => {
                     current_element = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                }
+                // Handle self-closing tags like <PackageReference Include="..." Version="..." />
+                Ok(Event::Empty(e)) => {
+                    let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                     // Parse PackageReference
-                    if current_element == "PackageReference" {
+                    if element_name == "PackageReference" {
                         let mut pkg_name = String::new();
                         let mut pkg_version = String::new();
 
