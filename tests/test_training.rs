@@ -242,6 +242,7 @@ async fn test_search_with_scoring() -> Result<()> {
     let patterns_path = temp_dir.path().join("patterns");
     fs::create_dir_all(&patterns_path)?;
 
+    // Use older dates (> 30 days ago) to avoid recency bonus affecting scores
     let pattern_json = r#"{
   "patterns": [
     {
@@ -255,8 +256,8 @@ async fn test_search_with_scoring() -> Result<()> {
       "tags": ["test"],
       "usage_count": 10,
       "relevance_score": 0.95,
-      "created_at": "2025-10-25T00:00:00Z",
-      "updated_at": "2025-10-25T00:00:00Z"
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
     },
     {
       "id": "low-score",
@@ -269,8 +270,8 @@ async fn test_search_with_scoring() -> Result<()> {
       "tags": ["test"],
       "usage_count": 0,
       "relevance_score": 0.5,
-      "created_at": "2025-10-25T00:00:00Z",
-      "updated_at": "2025-10-25T00:00:00Z"
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
     }
   ]
 }"#;
@@ -466,13 +467,9 @@ async fn test_statistics() -> Result<()> {
 
     assert_eq!(stats["total_patterns"], 2);
     assert_eq!(stats["total_usage"], 8);
-    // Compare floating point with tolerance
+    // Use approximate comparison for floating point
     let avg_relevance = stats["avg_relevance"].as_f64().unwrap();
-    assert!(
-        (avg_relevance - 0.85).abs() < 0.001,
-        "avg_relevance should be approximately 0.85, got {}",
-        avg_relevance
-    );
+    assert!((avg_relevance - 0.85).abs() < 0.001, "Expected avg_relevance ~0.85, got {}", avg_relevance);
 
     let categories = stats["categories"].as_array().unwrap();
     assert_eq!(categories.len(), 2);

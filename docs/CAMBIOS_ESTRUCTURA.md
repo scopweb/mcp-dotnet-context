@@ -20,7 +20,7 @@ Mantener el raíz del proyecto limpio y profesional con solo los archivos esenci
 
 ### Antes (raíz del proyecto):
 ```
-mcp-dotnet-context-rust/
+mcp-dotnet-context/
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE
@@ -41,7 +41,7 @@ mcp-dotnet-context-rust/
 
 ### Después (estructura organizada):
 ```
-mcp-dotnet-context-rust/
+mcp-dotnet-context/
 ├── README.md                     ✅ Esencial
 ├── CHANGELOG.md                  ✅ Esencial
 ├── LICENSE                       ✅ Esencial

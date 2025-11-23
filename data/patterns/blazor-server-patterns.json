@@ -578,6 +578,84 @@
       "relevance_score": 0.8,
       "created_at": "2025-10-25T14:41:53.730712400Z",
       "updated_at": "2025-10-25T14:41:53.730714400Z"
+    },
+    {
+      "id": "blazor-state-url-based-net10",
+      "category": "state-management",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "URL-Based State Management (.NET 10)",
+      "description": "Encode transient navigation state in the URL using route parameters and query strings. State persists across page reloads, is bookmarkable, and shareable. Use SupplyParameterFromQuery for query parameters and route constraints for validation.",
+      "code": "// Component.razor - URL-based state management\n@page \"/products/{CategoryId:int}\"\n@inject NavigationManager Navigation\n\n<h3>Category: @CategoryId</h3>\n<input @bind=\"searchTerm\" @bind:after=\"UpdateUrl\" />\n\n@code {\n    [Parameter] public int CategoryId { get; set; }\n    [SupplyParameterFromQuery] public string? SearchTerm { get; set; }\n    \n    private string? searchTerm;\n    \n    protected override void OnParametersSet()\n    {\n        searchTerm = SearchTerm;\n    }\n    \n    private void UpdateUrl()\n    {\n        var query = $\"?searchTerm={Uri.EscapeDataString(searchTerm ?? \"\")}\";\n        Navigation.NavigateTo($\"/products/{CategoryId}{query}\", replace: true);\n    }\n    \n    private void NavigateToCategory(int categoryId)\n    {\n        Navigation.NavigateTo($\"/products/{categoryId}\");\n    }\n}",
+      "tags": [
+        "state",
+        "url",
+        "routing",
+        "bookmarkable",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.8,
+      "created_at": "2025-10-25T14:43:40.995332Z",
+      "updated_at": "2025-10-25T14:43:40.995333900Z"
+    },
+    {
+      "id": "blazor-perf-shouldrender-net10",
+      "category": "performance",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "ShouldRender Optimization for Render Control (.NET 10)",
+      "description": "Override ShouldRender() to prevent unnecessary re-renders when component state hasn't meaningfully changed. Critical for components in loops or high-frequency updates. Use @key directive for list items to optimize reconciliation. Reduces rendering overhead by ~40% in large component trees.",
+      "code": "// Component.razor - Advanced ShouldRender optimization\n@code {\n    private int prevFlightId;\n    private bool shouldRender = true;\n    \n    [Parameter] public FlightInfo? Flight { get; set; }\n    \n    protected override bool ShouldRender()\n    {\n        if (Flight?.FlightId != prevFlightId)\n        {\n            prevFlightId = Flight?.FlightId ?? 0;\n            shouldRender = true;\n        }\n        \n        // Return cached value for multiple consecutive calls\n        var result = shouldRender;\n        shouldRender = false;\n        return result;\n    }\n    \n    // Force render when needed\n    private async Task ForceRefresh()\n    {\n        shouldRender = true;\n        await InvokeAsync(StateHasChanged);\n    }\n}\n\n// Alternative: Use @key directive for list items\n<ul>\n    @foreach (var item in items)\n    {\n        <li @key=\"item.Id\">\n            <ItemComponent Item=\"@item\" />\n        </li>\n    }\n</ul>",
+      "tags": [
+        "performance",
+        "rendering",
+        "optimization",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.8,
+      "created_at": "2025-10-25T14:45:41.290256Z",
+      "updated_at": "2025-10-25T14:45:41.290257200Z"
+    },
+    {
+      "id": "blazor-perf-avoid-splatting-net10",
+      "category": "performance",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Avoid Attribute Splatting in Hot Paths (.NET 10)",
+      "description": "Avoid attribute splatting and CaptureUnmatchedValues in performance-critical components that render at scale. Reflection-based parameter writing adds overhead. Use explicit typed parameters instead. Reserve splatting for infrequently rendered components like dialogs or forms.",
+      "code": "// Avoid attribute splatting in hot-path components\n// ❌ BAD - Slow for repeated components\n<GridCell @attributes=\"allParameters\" />\n\n// ✅ GOOD - Explicit parameters\n<GridCell Value=\"@value\" \n          IsSelected=\"@isSelected\" \n          OnClick=\"@HandleClick\" />\n\n// Avoid manual parameter reflection\n// ❌ BAD - Reflection overhead\npublic class SlowComponent : ComponentBase\n{\n    [Parameter(CaptureUnmatchedValues = true)]\n    public Dictionary<string, object>? AdditionalAttributes { get; set; }\n}\n\n// ✅ GOOD - Explicit typed parameters\npublic class FastComponent : ComponentBase\n{\n    [Parameter] public string? CssClass { get; set; }\n    [Parameter] public EventCallback OnClick { get; set; }\n}",
+      "tags": [
+        "performance",
+        "parameters",
+        "reflection",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.8,
+      "created_at": "2025-10-25T14:52:28.503519200Z",
+      "updated_at": "2025-10-25T14:52:28.503521600Z"
+    },
+    {
+      "id": "blazor-arch-clean-architecture-net10",
+      "category": "patterns",
+      "framework": "blazor-server",
+      "version": "10.0",
+      "title": "Clean Architecture with CQRS Pattern (.NET 10)",
+      "description": "Implement Clean Architecture with clear layer separation: Domain (entities), Application (use cases with MediatR CQRS), Infrastructure (data), and Presentation (Blazor). Dependencies flow inward. Use interfaces for decoupling. Enables testability, maintainability, and technology independence.",
+      "code": "// Project Structure:\n// - Domain: Entities, interfaces (no dependencies)\n// - Application: Use cases, CQRS handlers (depends on Domain)\n// - Infrastructure: Data access, external services\n// - Presentation: Blazor UI (depends on Application)\n\n// Domain/Entities/Product.cs\npublic class Product\n{\n    public int Id { get; set; }\n    public string Name { get; set; } = string.Empty;\n    public decimal Price { get; set; }\n}\n\n// Application/Products/Queries/GetProductsQuery.cs\npublic record GetProductsQuery : IRequest<List<Product>>;\n\npublic class GetProductsQueryHandler \n    : IRequestHandler<GetProductsQuery, List<Product>>\n{\n    private readonly IProductRepository _repository;\n    \n    public async Task<List<Product>> Handle(\n        GetProductsQuery request, \n        CancellationToken ct)\n    {\n        return await _repository.GetAllAsync(ct);\n    }\n}\n\n// Blazor Component\n@page \"/products\"\n@inject IMediator Mediator\n\n@code {\n    private List<Product> products = new();\n    \n    protected override async Task OnInitializedAsync()\n    {\n        products = await Mediator.Send(new GetProductsQuery());\n    }\n}",
+      "tags": [
+        "architecture",
+        "clean-architecture",
+        "cqrs",
+        "mediatr",
+        "net10"
+      ],
+      "usage_count": 0,
+      "relevance_score": 0.8,
+      "created_at": "2025-10-25T14:55:30.940260Z",
+      "updated_at": "2025-10-25T14:55:30.940263200Z"
     }
   ]
 }

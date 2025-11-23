@@ -177,7 +177,7 @@ When compiled and running:
 
 2. **Compile the Project**
    ```bash
-   cd mcp-dotnet-context-rust
+   cd mcp-dotnet-context
    cargo build --release
    ```
 

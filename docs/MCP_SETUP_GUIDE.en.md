@@ -17,7 +17,7 @@
 ## 🔧 Step 1: Build the Server
 
 ```bash
-cd mcp-dotnet-context-rust
+cd mcp-dotnet-context
 cargo build --release
 ```
 
