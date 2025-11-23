@@ -1,15 +1,15 @@
 [package]
-name = "mcp-dotnet-context"
+name = "mcp-context-rust"
 version = "0.1.0"
 edition = "2021"
-authors = ["MCP .NET Context Contributors"]
-description = "Experimental MCP server for .NET & Blazor Server - Context reinforcement and pattern training research (not for production)"
+authors = ["MCP Context Rust Contributors"]
+description = "Experimental MCP server for context reinforcement and pattern training research (not for production)"
 license = "MIT"
-repository = "https://github.com/scopweb/mcp-dotnet-context"
-homepage = "https://github.com/scopweb/mcp-dotnet-context"
-documentation = "https://github.com/scopweb/mcp-dotnet-context#readme"
+repository = "https://github.com/scopweb/mcp-context-rust"
+homepage = "https://github.com/scopweb/mcp-context-rust"
+documentation = "https://github.com/scopweb/mcp-context-rust#readme"
 readme = "README.md"
-keywords = ["mcp", "dotnet", "blazor", "experimental", "research"]
+keywords = ["mcp", "rust", "context", "experimental", "research"]
 categories = ["development-tools", "parsing", "api-bindings"]
 publish = false  # Not published to crates.io (experimental project)
 
@@ -27,7 +27,7 @@ toml = "0.8"
 tree-sitter = "0.20"
 tree-sitter-c-sharp = "0.20"
 
-# XML parsing (for .csproj files)
+# XML parsing (for project files)
 quick-xml = { version = "0.31", features = ["serialize"] }
 
 # File system operations
