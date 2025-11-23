@@ -134,7 +134,7 @@ unaffected_versions = []
 $ cargo audit
    Fetching advisory database from `https://github.com/rustsec/advisory-db.git`
     Updating `rustsec` index
-   Auditing /home/user/mcp-dotnet-context-rust/Cargo.lock
+   Auditing /home/user/mcp-dotnet-context/Cargo.lock
 
     Finished `advisory` check: 0 vulnerabilities found
 ```
@@ -156,7 +156,7 @@ Entonces:
 $ cargo audit
    Fetching advisory database from `https://github.com/rustsec/advisory-db.git`
     Updating `rustsec` index
-   Auditing /home/user/mcp-dotnet-context-rust/Cargo.lock
+   Auditing /home/user/mcp-dotnet-context/Cargo.lock
 
 Vulnerabilities found!
 
@@ -203,7 +203,7 @@ cargo audit
 
 ```bash
 # En tu terminal
-cd /path/to/mcp-dotnet-context-rust
+cd /path/to/mcp-dotnet-context
 
 # Ejecutar auditoría
 cargo audit
@@ -323,7 +323,7 @@ jobs:
 Si ejecutamos en tu proyecto actual:
 
 ```bash
-$ cd /c/MCPs/clone/mcp-dotnet-context-rust
+$ cd /path/to/mcp-dotnet-context
 $ cargo audit
 ```
 
@@ -331,7 +331,7 @@ $ cargo audit
 ```
    Fetching advisory database from `https://github.com/rustsec/advisory-db.git`
     Updating `rustsec` index
-   Auditing /c/MCPs/clone/mcp-dotnet-context-rust/Cargo.lock
+   Auditing /path/to/mcp-dotnet-context/Cargo.lock
 
     Finished `advisory` check: 0 vulnerabilities found ✅
 ```

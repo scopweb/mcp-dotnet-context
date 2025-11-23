@@ -83,7 +83,7 @@ ARCHIVOS EXCLUIDOS (.gitignore):
 ================================================================================
 
 1. INICIALIZAR GIT:
-   cd c:\MCPs\clone\mcp-dotnet-context-rust
+   cd c:\MCPs\clone\mcp-dotnet-context
    git init
    git add .
    git status

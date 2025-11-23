@@ -17,7 +17,7 @@
 ## 🔧 Paso 1: Compilar el Servidor
 
 ```bash
-cd mcp-dotnet-context-rust
+cd mcp-dotnet-context
 cargo build --release
 ```
 
