@@ -40,23 +40,6 @@ pub struct StorageConfig {
     pub cache_dir: String,
 }
 
-impl Config {
-    pub fn load() -> Result<Self> {
-        // Try to load from config file, otherwise use defaults
-        let config_path =
-            dirs::config_dir().map(|p| p.join("mcp-dotnet-context").join("config.toml"));
-
-        if let Some(path) = config_path {
-            if path.exists() {
-                let content = std::fs::read_to_string(&path)?;
-                return Ok(toml::from_str(&content)?);
-            }
-        }
-
-        Ok(Self::default())
-    }
-}
-
 impl Default for Config {
     fn default() -> Self {
         // Try to get patterns path from environment variable first
@@ -112,5 +95,22 @@ impl Default for Config {
                 cache_dir: "cache".to_string(),
             },
         }
+    }
+}
+
+impl Config {
+    pub fn load() -> Result<Self> {
+        // Try to load from config file, otherwise use defaults
+        let config_path =
+            dirs::config_dir().map(|p| p.join("mcp-dotnet-context").join("config.toml"));
+
+        if let Some(path) = config_path {
+            if path.exists() {
+                let content = std::fs::read_to_string(&path)?;
+                return Ok(toml::from_str(&content)?);
+            }
+        }
+
+        Ok(Self::default())
     }
 }

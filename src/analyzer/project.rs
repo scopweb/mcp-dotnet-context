@@ -71,7 +71,7 @@ impl ProjectAnalyzer {
 
         loop {
             match reader.read_event_into(&mut buf) {
-                Ok(Event::Start(e)) => {
+                Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                     current_element = String::from_utf8_lossy(e.name().as_ref()).to_string();
                 }
                 // Handle self-closing tags like <PackageReference Include="..." Version="..." />
