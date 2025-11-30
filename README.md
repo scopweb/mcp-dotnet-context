@@ -1,11 +1,11 @@
-# 🦀 MCP .NET Context
+# 🦀 MCP Context Rust
 
-> A specialized Model Context Protocol (MCP) server for .NET & Blazor Server that provides intelligent context analysis and code pattern training for AI assistants.
+> A specialized Model Context Protocol (MCP) server written in Rust that provides intelligent context analysis and code pattern training for AI assistants.
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue.svg?style=flat-square)](https://modelcontextprotocol.io)
-[![Status](https://img.shields.io/badge/Status-Experimental-yellow.svg?style=flat-square)](https://github.com/scopweb/mcp-dotnet-context)
+[![Status](https://img.shields.io/badge/Status-Experimental-yellow.svg?style=flat-square)](https://github.com/scopweb/mcp-context-rust)
 
 ---
 
@@ -22,8 +22,8 @@
 ## ✨ Features
 
 ### Core Functionality
-- 🔍 **Deep .NET Analysis**: Parse .csproj, analyze C# code with tree-sitter, detect dependencies
-- 📚 **27+ Built-in Patterns**: Official Microsoft best practices for Blazor Server
+- 🔍 **Deep Code Analysis**: Parse project files, analyze code with tree-sitter, detect dependencies
+- 📚 **27+ Built-in Patterns**: Best practices for various development scenarios
   - 🔄 Lifecycle (6 patterns)
   - ⚡ Performance (5 patterns)
   - 🌐 JavaScript Interop (4 patterns)
@@ -32,7 +32,7 @@
   - 💉 Dependency Injection (2 patterns)
   - 📦 State Management (2 patterns)
 - 🎓 **Pattern Training**: Incremental learning system - add your own patterns
-- 🎯 **Blazor Specialized**: Context-aware suggestions for Blazor Server components
+- 🎯 **Context-Aware**: Intelligent suggestions based on project analysis
 - 🦀 **Rust Performance**: 10x faster than Python equivalents
 - 🔌 **MCP Native**: Works with Claude Desktop and other MCP clients
 
@@ -56,28 +56,27 @@
 - 🔒 **Memory Safe** - zero crashes or leaks
 - 📦 **Single Binary** - no runtime dependencies
 - 🚀 **Concurrent** - efficient async request handling
-- 🎯 **Native Parsing** - tree-sitter C# integration
+- 🎯 **Native Parsing** - tree-sitter integration
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - **Rust 1.70+** ([Install Rust](https://rustup.rs/))
-- **.NET 10 SDK** (optional, for testing projects)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/scopweb/mcp-dotnet-context.git
-cd mcp-dotnet-context
+git clone https://github.com/scopweb/mcp-context-rust.git
+cd mcp-context-rust
 
 # Build release binary
 cargo build --release
 
 # Binary location:
-# Windows: target/release/mcp-dotnet-context.exe
-# Linux/Mac: target/release/mcp-dotnet-context
+# Windows: target/release/mcp-context-rust.exe
+# Linux/Mac: target/release/mcp-context-rust
 ```
 
 ### Configuration for Claude Desktop
@@ -89,11 +88,11 @@ Edit: `%APPDATA%\Claude\claude_desktop_config.json`
 ```json
 {
   "mcpServers": {
-    "dotnet-context": {
-      "command": "C:\\path\\to\\mcp-dotnet-context\\target\\release\\mcp-dotnet-context.exe",
+    "context-rust": {
+      "command": "C:\\path\\to\\mcp-context-rust\\target\\release\\mcp-context-rust.exe",
       "args": [],
       "env": {
-        "MCP_PATTERNS_PATH": "C:\\path\\to\\mcp-dotnet-context\\data\\patterns"
+        "MCP_PATTERNS_PATH": "C:\\path\\to\\mcp-context-rust\\data\\patterns"
       }
     }
   }
@@ -107,11 +106,11 @@ Edit: `~/.config/Claude/claude_desktop_config.json`
 ```json
 {
   "mcpServers": {
-    "dotnet-context": {
-      "command": "/path/to/mcp-dotnet-context/target/release/mcp-dotnet-context",
+    "context-rust": {
+      "command": "/path/to/mcp-context-rust/target/release/mcp-context-rust",
       "args": [],
       "env": {
-        "MCP_PATTERNS_PATH": "/path/to/mcp-dotnet-context/data/patterns"
+        "MCP_PATTERNS_PATH": "/path/to/mcp-context-rust/data/patterns"
       }
     }
   }
@@ -128,20 +127,20 @@ Close and reopen Claude Desktop to load the MCP server.
 
 ## 📖 Usage
 
-### Analyze a .NET Project
+### Analyze a Project
 
 ```
-You: Analyze my Blazor project at C:\Projects\MyApp
+You: Analyze my project at C:\Projects\MyApp
 
 Claude → calls analyze-project tool
-Server → analyzes .csproj, C# files, dependencies
+Server → analyzes project files, code, dependencies
 Claude → shows structure, patterns, suggestions
 ```
 
 ### Get Code Patterns
 
 ```
-You: Show me Blazor Server lifecycle patterns
+You: Show me lifecycle patterns
 
 Claude → calls get-patterns tool
 Server → returns relevant patterns with code examples
@@ -151,7 +150,7 @@ Claude → explains best practices
 ### Search Patterns
 
 ```
-You: Find patterns for async initialization in Blazor
+You: Find patterns for async initialization
 
 Claude → calls search-patterns tool
 Server → intelligent search with scoring
@@ -161,7 +160,7 @@ Claude → shows most relevant patterns
 ### Train New Patterns
 
 ```
-You: Save this as a best practice for Blazor error handling:
+You: Save this as a best practice for error handling:
 [your code example]
 
 Claude → calls train-pattern tool
@@ -184,7 +183,7 @@ Server → returns total patterns, categories, frameworks
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `analyze-project` | Analyze .NET project structure | `project_path` (string) |
+| `analyze-project` | Analyze project structure | `project_path` (string) |
 | `get-patterns` | Get patterns by framework/category | `framework` (string), `category` (optional) |
 | `search-patterns` | Advanced pattern search | `query`, `framework`, `category`, `tags`, `min_score` |
 | `train-pattern` | Add custom pattern | `id`, `category`, `framework`, `title`, `description`, `code`, `tags` |
@@ -195,15 +194,13 @@ Server → returns total patterns, categories, frameworks
 ## 🏗️ Architecture
 
 ```
-mcp-dotnet-context/
+mcp-context-rust/
 ├── src/
 │   ├── main.rs              # Entry point
 │   ├── lib.rs               # Library root
 │   ├── config.rs            # Configuration
 │   ├── types.rs             # Shared types
 │   ├── analyzer/            # Code analysis
-│   │   ├── csharp.rs        # C# parser (tree-sitter)
-│   │   └── project.rs       # .csproj parser
 │   ├── context/             # Context generation
 │   ├── training/            # Pattern management
 │   │   └── mod.rs           # Training system
@@ -253,7 +250,7 @@ echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-1
 
 ### Project Status & Planning
 - **[Honest Assessment](HONEST_ASSESSMENT.md)** - Does this actually save time? (Truthful evaluation)
-- **[Roadmap](ROADMAP.md)** - From PoC to production-ready tool (Corporate integrations, real value)
+- **[Roadmap](ROADMAP.md)** - From PoC to production-ready tool
 - **[Security Audit](docs/SECURITY_AUDIT.md)** - How cargo-audit works and continuous scanning
 - **[Security Report](SECURITY_AUDIT_REPORT.md)** - Latest audit results: 0 vulnerabilities ✅
 
@@ -310,7 +307,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with [Rust](https://www.rust-lang.org/) 🦀
 - Code parsing with [tree-sitter](https://tree-sitter.github.io/)
 - MCP Protocol by [Anthropic](https://www.anthropic.com/)
-- Blazor patterns from [Microsoft Docs](https://learn.microsoft.com/en-us/aspnet/core/blazor/)
 
 ---
 
@@ -318,7 +314,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Server not connecting
 
-1. Check Claude Desktop logs: `%APPDATA%\Claude\logs\mcp-server-dotnet-context.log`
+1. Check Claude Desktop logs: `%APPDATA%\Claude\logs\mcp-server-context-rust.log`
 2. Verify executable path is absolute
 3. Ensure `MCP_PATTERNS_PATH` points to correct directory
 4. Try rebuilding: `cargo clean && cargo build --release`
@@ -336,9 +332,8 @@ echo %MCP_PATTERNS_PATH%  # Windows
 
 ### Parse errors
 
-- Ensure `.csproj` is valid XML
-- Check C# files are UTF-8 encoded
-- Verify .NET SDK version compatibility
+- Check files are UTF-8 encoded
+- Verify project structure is correct
 
 For more help, see [MCP_SETUP_GUIDE.md](docs/MCP_SETUP_GUIDE.md) or open an issue.
 
@@ -346,15 +341,15 @@ For more help, see [MCP_SETUP_GUIDE.md](docs/MCP_SETUP_GUIDE.md) or open an issu
 
 ## 📬 Contact
 
-- **Issues**: [GitHub Issues](https://github.com/scopweb/mcp-dotnet-context/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/scopweb/mcp-dotnet-context/discussions)
+- **Issues**: [GitHub Issues](https://github.com/scopweb/mcp-context-rust/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/scopweb/mcp-context-rust/discussions)
 
 ---
 
 <div align="center">
 
-**Made with 🦀 Rust and ❤️ for the .NET community**
+**Made with 🦀 Rust**
 
-[⭐ Star this repository](https://github.com/scopweb/mcp-dotnet-context) if you find it useful!
+[⭐ Star this repository](https://github.com/scopweb/mcp-context-rust) if you find it useful!
 
 </div>
