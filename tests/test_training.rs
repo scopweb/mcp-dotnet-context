@@ -469,7 +469,11 @@ async fn test_statistics() -> Result<()> {
     assert_eq!(stats["total_usage"], 8);
     // Use approximate comparison for floating point
     let avg_relevance = stats["avg_relevance"].as_f64().unwrap();
-    assert!((avg_relevance - 0.85).abs() < 0.001, "Expected avg_relevance ~0.85, got {}", avg_relevance);
+    assert!(
+        (avg_relevance - 0.85).abs() < 0.001,
+        "Expected avg_relevance ~0.85, got {}",
+        avg_relevance
+    );
 
     let categories = stats["categories"].as_array().unwrap();
     assert_eq!(categories.len(), 2);

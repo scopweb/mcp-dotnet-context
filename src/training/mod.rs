@@ -262,7 +262,7 @@ impl TrainingManager {
             score += 0.05;
         }
 
-        score.min(1.0) // Cap at 1.0
+        score // No cap - allow scores to differentiate patterns
     }
 
     /// Convenience method for simple searches

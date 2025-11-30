@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Documentation Cleanup**
+  - Renamed project from "MCP .NET Context" to "MCP Context Rust"
+  - Removed incorrect .NET/Blazor references from documentation
+  - Updated all repository URLs to use `mcp-context-rust`
+  - Fixed project name in Cargo.toml metadata
+
 ### Added (Phase 2 - Documentation & Security)
 - **Security Auditing**
   - cargo-audit integration for dependency vulnerability scanning
@@ -25,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - English translations: MCP_SETUP_GUIDE.en.md, USAGE_EXAMPLES.en.md
   - Security audit guide: docs/SECURITY_AUDIT.md
   - Honest assessment: HONEST_ASSESSMENT.md (does it save time?)
-  - Roadmap: ROADMAP.md (path to production with 420% ROI)
+  - Roadmap: ROADMAP.md (path to production)
   - Security audit report: SECURITY_AUDIT_REPORT.md
   - Bilingual documentation (ES/EN)
 
@@ -46,10 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Core Features (Phase 1)
 - MCP protocol implementation (2024-11-05)
-- .NET project analysis with tree-sitter
-- C# code parsing (classes, methods, properties, interfaces)
-- .csproj parsing with dependency detection
-- 27+ built-in Blazor Server patterns
+- Project analysis with tree-sitter
+- Code parsing (classes, methods, properties, interfaces)
+- Project file parsing with dependency detection
+- 27+ built-in patterns
   - Lifecycle patterns (6)
   - Performance patterns (5)
   - JavaScript Interop patterns (4)
@@ -59,9 +66,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - State Management patterns (2)
 - Pattern training system with incremental learning
 - Pattern search with intelligent scoring
-- Context-aware suggestions for Blazor Server
+- Context-aware suggestions
 - 5 MCP tools:
-  - `analyze-project` - Full .NET project analysis
+  - `analyze-project` - Full project analysis
   - `get-patterns` - Retrieve patterns by framework/category
   - `search-patterns` - Advanced pattern search
   - `train-pattern` - Add custom patterns
@@ -70,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 - Written in Rust for performance (10x faster than Python)
 - Async/await with Tokio runtime
-- Tree-sitter for accurate C# parsing
+- Tree-sitter for accurate code parsing
 - JSON-RPC 2.0 over stdio transport
 - Environment variable configuration support
 - GitHub Actions CI/CD
@@ -81,9 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial project structure
 - Basic MCP server implementation
-- .NET 10 and Blazor Server support
 
 ---
 
-[Unreleased]: https://github.com/scopweb/mcp-dotnet-context/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/scopweb/mcp-dotnet-context/releases/tag/v0.1.0
+[Unreleased]: https://github.com/scopweb/mcp-context-rust/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/scopweb/mcp-context-rust/releases/tag/v0.1.0
