@@ -1,7 +1,7 @@
 # 🦀 Guía Definitiva: Crear un MCP Server con Rust
 
 **Fecha:** 2025-10-25
-**Autor:** Lecciones aprendidas del desarrollo de mcp-dotnet-context
+**Autor:** Lecciones aprendidas del desarrollo de mcp-rust-context
 **Versión Protocolo MCP:** 2024-11-05
 
 ---
@@ -769,5 +769,5 @@ async fn main() -> Result<()> {
 ---
 
 **Última actualización:** 2025-10-25
-**Basado en:** Desarrollo de mcp-dotnet-context v0.1.0
+**Basado en:** Desarrollo de mcp-rust-context v0.1.0
 **Errores corregidos:** 6 errores críticos identificados y documentados

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use mcp_dotnet_context::analyzer::{CSharpAnalyzer, ProjectAnalyzer};
+use mcp_context_rust::analyzer::{CSharpAnalyzer, ProjectAnalyzer};
 use std::fs;
 
 #[tokio::test]

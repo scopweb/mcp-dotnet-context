@@ -1,7 +1,7 @@
 use anyhow::Result;
 use chrono::Utc;
-use mcp_dotnet_context::training::{SearchCriteria, TrainingManager};
-use mcp_dotnet_context::types::CodePattern;
+use mcp_context_rust::training::{SearchCriteria, TrainingManager};
+use mcp_context_rust::types::CodePattern;
 use std::fs;
 
 #[tokio::test]
@@ -344,7 +344,7 @@ async fn test_add_and_save_pattern() -> Result<()> {
         updated_at: Utc::now(),
     };
 
-    manager.add_pattern(new_pattern);
+    manager.add_pattern(new_pattern).expect("Failed to add pattern");
     assert_eq!(manager.get_all_patterns().len(), 1);
 
     // Save patterns

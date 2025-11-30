@@ -20,7 +20,7 @@ Crear un servidor MCP (Model Context Protocol) en Rust que proporcione a Claude 
 ## 🏗️ Arquitectura del Sistema
 
 ```
-mcp-dotnet-context/
+mcp-rust-context/
 ├── src/
 │   ├── main.rs              # Entry point
 │   ├── lib.rs               # Library root

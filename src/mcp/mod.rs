@@ -1,9 +1,9 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 
-use crate::analyzer::ProjectAnalyzer;
+use crate::analyzer::GenericAnalyzer;
 use crate::config::Config;
 use crate::context::ContextBuilder;
 use crate::training::{SearchCriteria, TrainingManager};
@@ -81,22 +81,25 @@ impl Server {
         eprintln!("MCP server starting on stdio transport");
 
         let stdin = tokio::io::stdin();
-        let mut reader = tokio::io::BufReader::new(stdin).lines();
+        let mut reader = BufReader::new(stdin);
         let mut stdout = tokio::io::stdout();
 
         eprintln!("Waiting for requests...");
 
-        // Process requests (wait for initialize from client)
+        // Track if client uses Content-Length framing
+        let mut use_framing = false;
+
+        // Process requests
         loop {
-            match reader.next_line().await {
-                Ok(Some(line)) => {
-                    if line.trim().is_empty() {
+            // Read message (auto-detect framing on first message)
+            match Self::read_mcp_message(&mut reader, &mut use_framing).await {
+                Ok(Some(json_body)) => {
+                    if json_body.is_empty() {
                         continue;
                     }
+                    eprintln!("Received request: {}", &json_body[..json_body.len().min(100)]);
 
-                    eprintln!("Received request: {}", &line[..line.len().min(100)]);
-
-                    match serde_json::from_str::<JsonRpcRequest>(&line) {
+                    match serde_json::from_str::<JsonRpcRequest>(&json_body) {
                         Ok(request) => {
                             // Check if this is a notification (no id field)
                             if request.id.is_none() && request.method.starts_with("notifications/")
@@ -108,18 +111,10 @@ impl Server {
                             let response = self.handle_request(request).await;
                             match serde_json::to_string(&response) {
                                 Ok(response_str) => {
-                                    eprintln!("Sending response");
-                                    if let Err(e) = stdout.write_all(response_str.as_bytes()).await
-                                    {
-                                        eprintln!("Error writing to stdout: {}", e);
-                                        break;
-                                    }
-                                    if let Err(e) = stdout.write_all(b"\n").await {
-                                        eprintln!("Error writing newline: {}", e);
-                                        break;
-                                    }
-                                    if let Err(e) = stdout.flush().await {
-                                        eprintln!("Error flushing stdout: {}", e);
+                                    eprintln!("Sending response (framing={})", use_framing);
+                                    // Send response matching client's framing style
+                                    if let Err(e) = Self::write_mcp_message(&mut stdout, &response_str, use_framing).await {
+                                        eprintln!("Error writing response: {}", e);
                                         break;
                                     }
                                     eprintln!(
@@ -145,9 +140,7 @@ impl Server {
                             };
 
                             if let Ok(error_str) = serde_json::to_string(&error_response) {
-                                let _ = stdout.write_all(error_str.as_bytes()).await;
-                                let _ = stdout.write_all(b"\n").await;
-                                let _ = stdout.flush().await;
+                                let _ = Self::write_mcp_message(&mut stdout, &error_str, use_framing).await;
                             }
                         }
                     }
@@ -164,6 +157,85 @@ impl Server {
         }
 
         eprintln!("MCP server shutting down");
+        Ok(())
+    }
+
+    /// Reads a single MCP message from stdin.
+    /// Auto-detects framing style (Content-Length headers vs newline-delimited JSON).
+    /// Sets `use_framing` to true if Content-Length headers are detected.
+    async fn read_mcp_message(reader: &mut BufReader<tokio::io::Stdin>, use_framing: &mut bool) -> Result<Option<String>> {
+        let mut first_line = String::new();
+        
+        // Read the first line to determine framing type
+        let bytes_read = reader.read_line(&mut first_line).await?;
+        if bytes_read == 0 {
+            return Ok(None); // EOF
+        }
+
+        let trimmed = first_line.trim();
+        
+        // Check if this is Content-Length header (MCP standard framing)
+        if trimmed.to_lowercase().starts_with("content-length:") {
+            *use_framing = true;
+            
+            // Parse Content-Length value
+            let length_str = trimmed
+                .split(':')
+                .nth(1)
+                .ok_or_else(|| anyhow::anyhow!("Invalid Content-Length header"))?
+                .trim();
+            
+            let content_length: usize = length_str
+                .parse()
+                .map_err(|_| anyhow::anyhow!("Invalid Content-Length value: {}", length_str))?;
+
+            // Read remaining headers until empty line
+            loop {
+                let mut header_line = String::new();
+                reader.read_line(&mut header_line).await?;
+                
+                // Empty line (just \r\n or \n) marks end of headers
+                if header_line.trim().is_empty() {
+                    break;
+                }
+            }
+
+            // Read exactly content_length bytes for the JSON body
+            let mut body = vec![0u8; content_length];
+            reader.read_exact(&mut body).await?;
+            
+            let json_body = String::from_utf8(body)
+                .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in message body: {}", e))?;
+
+            Ok(Some(json_body))
+        } else if trimmed.starts_with('{') {
+            // Legacy: newline-delimited JSON (no Content-Length header)
+            // Claude Desktop uses this mode
+            Ok(Some(trimmed.to_string()))
+        } else if trimmed.is_empty() {
+            // Empty line, continue reading
+            Ok(Some(String::new()))
+        } else {
+            // Unknown format - try to parse as JSON anyway
+            eprintln!("Warning: Unexpected line format, attempting to parse: {}", &trimmed[..trimmed.len().min(50)]);
+            Ok(Some(trimmed.to_string()))
+        }
+    }
+
+    /// Writes a JSON-RPC response.
+    /// If use_framing is true, adds Content-Length header.
+    /// Otherwise, sends newline-delimited JSON (for Claude Desktop compatibility).
+    async fn write_mcp_message(stdout: &mut tokio::io::Stdout, json: &str, use_framing: bool) -> Result<()> {
+        if use_framing {
+            let content_length = json.len();
+            let header = format!("Content-Length: {}\r\n\r\n", content_length);
+            stdout.write_all(header.as_bytes()).await?;
+        }
+        
+        stdout.write_all(json.as_bytes()).await?;
+        stdout.write_all(b"\n").await?;
+        stdout.flush().await?;
+        
         Ok(())
     }
 
@@ -244,13 +316,13 @@ impl Server {
             "tools": [
                 {
                     "name": "analyze-project",
-                    "description": "Analyze a .NET project and get intelligent context about its structure, patterns, and suggestions",
+                    "description": "Analyze any project (Rust, Node, Python, .NET, Go, Java, PHP/Laravel/Vue) and get intelligent context about its structure, dependencies, and suggestions",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "project_path": {
                                 "type": "string",
-                                "description": "Path to the .NET project directory containing .csproj file"
+                                "description": "Path to the project directory (containing Cargo.toml, package.json, .csproj, pyproject.toml, go.mod, pom.xml, or composer.json)"
                             }
                         },
                         "required": ["project_path"]
@@ -354,6 +426,14 @@ impl Server {
                         "type": "object",
                         "properties": {}
                     }
+                },
+                {
+                    "name": "get-help",
+                    "description": "Get usage instructions for this MCP server. Call this first to understand how to use the available tools effectively.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {}
+                    }
                 }
             ]
         }))
@@ -375,6 +455,7 @@ impl Server {
             "search-patterns" => self.tool_search_patterns(arguments).await,
             "train-pattern" => self.tool_train_pattern(arguments).await,
             "get-statistics" => self.tool_get_statistics().await,
+            "get-help" => self.tool_get_help().await,
             _ => Err(format!("Unknown tool: {}", tool_name)),
         }
     }
@@ -388,26 +469,47 @@ impl Server {
             .as_str()
             .ok_or("Missing project_path")?;
 
-        tracing::info!("Analyzing project: {}", project_path);
+        eprintln!("DEBUG: Analyzing project path: {}", project_path);
 
-        // Analyze project
-        let project_analyzer = ProjectAnalyzer::new(vec![]);
-        let project = project_analyzer
-            .analyze(PathBuf::from(project_path).as_path())
+        // Validate path exists
+        let path = PathBuf::from(project_path);
+        if !path.exists() {
+            return Err(format!(
+                "Project path does not exist: '{}'. Please provide an absolute path to a project directory.",
+                project_path
+            ));
+        }
+
+        if !path.is_dir() {
+            return Err(format!(
+                "Path is not a directory: '{}'. Please provide a directory path, not a file path.",
+                project_path
+            ));
+        }
+
+        eprintln!("DEBUG: Path exists and is directory, detecting project type...");
+
+        // Use the new generic analyzer
+        let project = GenericAnalyzer::analyze(path.as_path())
             .await
-            .map_err(|e| format!("Failed to analyze project: {}", e))?;
+            .map_err(|e| {
+                eprintln!("DEBUG: Analysis failed with error: {}", e);
+                format!("Failed to analyze project: {}. Make sure the directory contains a valid project file (Cargo.toml, package.json, .csproj, pyproject.toml, go.mod, or pom.xml).", e)
+            })?;
+
+        eprintln!("DEBUG: Detected project type: {:?}", project.project_type);
 
         // Build context with patterns
         let context_builder =
             ContextBuilder::new().with_training_manager(self.training_manager.clone());
 
         let analysis = context_builder
-            .build_analysis(project)
+            .build_generic_analysis(project)
             .await
             .map_err(|e| format!("Failed to build analysis: {}", e))?;
 
         // Generate formatted context
-        let context_string = context_builder.build_context_string(&analysis);
+        let context_string = context_builder.build_generic_context_string(&analysis);
 
         Ok(serde_json::json!({
             "content": [{
@@ -561,7 +663,10 @@ impl Server {
             updated_at: chrono::Utc::now(),
         };
 
-        self.training_manager.add_pattern(pattern.clone());
+        // Add pattern with validation (prevents path traversal)
+        self.training_manager
+            .add_pattern(pattern.clone())
+            .map_err(|e| format!("Invalid pattern: {}", e))?;
 
         // Save to disk
         self.training_manager
@@ -619,6 +724,88 @@ impl Server {
             "content": [{
                 "type": "text",
                 "text": output
+            }],
+            "isError": false
+        }))
+    }
+
+    // Tool: get-help
+    async fn tool_get_help(&self) -> Result<serde_json::Value, String> {
+        let help_text = r#"# MCP Context Rust - Guía de Uso
+
+## Qué es esto
+Servidor MCP que analiza proyectos de código y proporciona patrones de buenas prácticas.
+
+## Herramientas disponibles
+
+### 1. analyze-project
+**Cuándo usar:** El usuario menciona un proyecto o ruta de código.
+```
+analyze-project { "project_path": "C:/ruta/al/proyecto" }
+```
+- Detecta automáticamente: Rust, Node, Python, PHP, Go, Java, .NET
+- Devuelve: estructura, dependencias, framework detectado, sugerencias
+
+### 2. search-patterns
+**Cuándo usar:** El usuario pregunta "cómo hacer X" o busca buenas prácticas.
+```
+search-patterns { "query": "autenticación jwt" }
+search-patterns { "query": "manejo errores", "framework": "laravel" }
+```
+
+### 3. get-patterns
+**Cuándo usar:** El usuario quiere patrones de un framework específico.
+```
+get-patterns { "framework": "laravel" }
+get-patterns { "framework": "react", "category": "hooks" }
+```
+
+### 4. train-pattern
+**Cuándo usar:** El usuario quiere guardar código como patrón reutilizable.
+```
+train-pattern {
+  "id": "mi-patron-001",
+  "framework": "vue",
+  "category": "composables",
+  "title": "useAuth composable",
+  "description": "Manejo de autenticación con Vue 3",
+  "code": "export function useAuth() { ... }",
+  "tags": ["auth", "vue3", "composable"]
+}
+```
+
+### 5. get-statistics
+**Cuándo usar:** Para saber cuántos patrones hay disponibles.
+```
+get-statistics {}
+```
+
+## Flujo recomendado
+
+1. **Usuario menciona proyecto** → `analyze-project`
+2. **Usuario pregunta cómo hacer algo** → `search-patterns`
+3. **Usuario quiere ejemplos de framework** → `get-patterns`
+4. **Usuario comparte código útil** → `train-pattern`
+
+## Frameworks soportados
+- **PHP:** laravel, symfony, wordpress
+- **JavaScript:** react, vue, nextjs, express
+- **Python:** django, flask, fastapi
+- **Rust:** actix-web, axum, tokio
+- **.NET:** blazor-server, aspnet-core
+- **Go:** gin, fiber
+- **Java:** spring
+
+## Notas
+- Usar rutas absolutas en analyze-project
+- Los patrones se guardan en data/patterns/
+- El servidor detecta automáticamente el tipo de proyecto
+"#;
+
+        Ok(serde_json::json!({
+            "content": [{
+                "type": "text",
+                "text": help_text
             }],
             "isError": false
         }))

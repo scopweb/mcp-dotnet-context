@@ -5,13 +5,16 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-use crate::types::{DotNetProject, NuGetPackage};
+use crate::types::{CSharpFile, DotNetProject, NuGetPackage};
+use super::csharp::CSharpAnalyzer;
 
+#[allow(dead_code)]
 pub struct ProjectAnalyzer {
     #[allow(dead_code)]
     ignore_patterns: Vec<String>,
 }
 
+#[allow(dead_code)]
 impl ProjectAnalyzer {
     pub fn new(ignore_patterns: Vec<String>) -> Self {
         Self { ignore_patterns }
@@ -24,8 +27,9 @@ impl ProjectAnalyzer {
         // Parse .csproj (XML)
         let (name, target_framework, packages) = self.parse_csproj(&csproj_path)?;
 
-        // Find all .cs files
-        let _files = self.find_csharp_files(path)?;
+        // Find and analyze all .cs files
+        let cs_paths = self.find_csharp_files(path)?;
+        let files = self.analyze_csharp_files(&cs_paths)?;
 
         Ok(DotNetProject {
             path: path.to_path_buf(),
@@ -34,8 +38,40 @@ impl ProjectAnalyzer {
             language_version: "10.0".to_string(),
             packages,
             project_references: vec![],
-            files: vec![],
+            files,
         })
+    }
+
+    /// Analyzes all C# files and returns their parsed information.
+    /// Errors during individual file parsing are logged but don't fail the entire analysis.
+    fn analyze_csharp_files(&self, paths: &[PathBuf]) -> Result<Vec<CSharpFile>> {
+        let mut files = Vec::new();
+        let mut analyzer = CSharpAnalyzer::new()
+            .context("Failed to initialize C# analyzer")?;
+
+        for path in paths {
+            match analyzer.analyze_file(path) {
+                Ok(file_info) => {
+                    tracing::debug!("Analyzed file: {:?}", path);
+                    files.push(file_info);
+                }
+                Err(e) => {
+                    // Log the error but continue with other files
+                    tracing::warn!(
+                        "Failed to analyze C# file {:?}: {}. Skipping.",
+                        path, e
+                    );
+                }
+            }
+        }
+
+        tracing::info!(
+            "Analyzed {} of {} C# files successfully",
+            files.len(),
+            paths.len()
+        );
+
+        Ok(files)
     }
 
     fn find_csproj(&self, path: &Path) -> Result<PathBuf> {
@@ -71,12 +107,13 @@ impl ProjectAnalyzer {
 
         loop {
             match reader.read_event_into(&mut buf) {
-                Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                Ok(Event::Start(e)) => {
                     current_element = String::from_utf8_lossy(e.name().as_ref()).to_string();
                 }
                 // Handle self-closing tags like <PackageReference Include="..." Version="..." />
                 Ok(Event::Empty(e)) => {
                     let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    current_element = element_name.clone();
 
                     // Parse PackageReference
                     if element_name == "PackageReference" {

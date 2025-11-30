@@ -1,4 +1,4 @@
-# 🔒 Security Audit Report - mcp-dotnet-context
+# 🔒 Security Audit Report - mcp-rust-context
 
 **Date:** October 25, 2025
 **Tool:** cargo-audit v0.21.2
@@ -202,7 +202,7 @@ $ cargo audit
 
 ## 🔐 Conclusion
 
-Your mcp-dotnet-context project has:
+Your mcp-rust-context project has:
 - ✅ **No known vulnerabilities**
 - ✅ **Automated security monitoring**
 - ✅ **CI/CD security checks**

@@ -2,150 +2,167 @@
 
 ## 📊 Current State (v0.1.0)
 
-**Status:** Proof-of-Concept / Learning Project
+**Status:** ⚠️ **Not Production Ready** - Critical issues need fixing
 
 ### What Works
-- ✅ MCP protocol implementation (2024-11-05)
-- ✅ .NET project analysis with tree-sitter
+- ✅ Basic MCP protocol structure
 - ✅ 27+ Blazor Server patterns (from public docs)
-- ✅ Pattern storage and retrieval
-- ✅ Claude Desktop integration
+- ✅ Pattern storage and retrieval (with security issues)
+- ✅ Tree-sitter C# parsing infrastructure
 
-### Honest Assessment
-**Does it save time currently?** ❌ No
+### What's Broken (Critical)
+- ❌ **Security:** Path traversal vulnerability in `train-pattern`
+- ❌ **MCP Protocol:** Missing Content-Length framing (incompatible with Claude Desktop)
+- ❌ **Functionality:** Project analyzer returns empty file list
+- ❌ **Tests:** Don't compile due to wrong crate name
 
-**Why not?**
-- Claude Desktop already analyzes code without the MCP
-- Patterns are from public documentation (Claude already knows them)
-- No access to private/corporate data
-- Setup overhead > benefits
-- "Training" doesn't persist between sessions
+---
 
-**Value?** ✅ Excellent learning project for MCP, Rust, and tree-sitter
+## 🚨 Phase 0: Critical Fixes (URGENT)
+
+> **These issues must be fixed before any other development.**
+> **Estimated time: 1 day**
+
+### 0.1 Security: Path Traversal Vulnerability
+
+**File:** `src/training/mod.rs` (lines 103-108)
+
+**Problem:** `save_patterns()` uses unsanitized `framework` parameter to construct file paths:
+```rust
+let filename = format!("{}-patterns.json", framework);
+let file_path = self.storage_path.join(filename);
+```
+
+An attacker can use `train-pattern` with `framework: "..\\..\\..\\Users\\username\\.ssh\\authorized_keys"` to overwrite arbitrary files.
+
+**Fix Required:**
+- [ ] Validate framework name (alphanumeric, hyphens, underscores only)
+- [ ] Reject path separators (`/`, `\`, `..`)
+- [ ] Canonicalize paths and verify they're within storage_path
+- [ ] Add unit tests for path traversal attempts
+
+**Severity:** ❗️ CRITICAL (RCE possible on Windows)
+
+---
+
+### 0.2 MCP Protocol: Implement Content-Length Framing
+
+**File:** `src/mcp/mod.rs` (lines 65-76)
+
+**Problem:** Server reads stdin line-by-line expecting raw JSON:
+```rust
+let mut reader = tokio::io::BufReader::new(stdin).lines();
+match reader.next_line().await { ... }
+```
+
+MCP protocol requires `Content-Length` header framing:
+```
+Content-Length: 123\r\n
+\r\n
+{"jsonrpc":"2.0",...}
+```
+
+Claude Desktop and other MCP clients send headers, causing parse errors.
+
+**Fix Required:**
+- [ ] Read headers until empty line (`\r\n\r\n`)
+- [ ] Parse `Content-Length` header
+- [ ] Read exactly N bytes for JSON body
+- [ ] Add integration test with proper framing
+
+**Severity:** ❗️ CRITICAL (Server unusable with standard MCP clients)
+
+---
+
+### 0.3 Functionality: Complete ProjectAnalyzer
+
+**File:** `src/analyzer/project.rs` (lines 25-32)
+
+**Problem:** `analyze()` finds .cs files but discards them:
+```rust
+let _files = self.find_csharp_files(path)?;  // Result ignored!
+
+Ok(DotNetProject {
+    files: vec![],  // Always empty
+})
+```
+
+ContextBuilder receives empty project data, making analysis useless.
+
+**Fix Required:**
+- [ ] Use CSharpAnalyzer to parse each .cs file found
+- [ ] Populate `files` field with actual file analysis
+- [ ] Handle parse errors gracefully (log and continue)
+- [ ] Add test verifying files are included
+
+**Severity:** ⚠️ HIGH (Core feature non-functional)
+
+---
+
+### 0.4 Tests: Fix Crate Name in Imports
+
+**File:** `tests/test_analyzer.rs` (line 2)
+
+**Problem:** Tests import wrong crate name:
+```rust
+use mcp_dotnet_context::analyzer::{...};  // Wrong!
+```
+
+Crate is named `mcp-context-rust` in Cargo.toml. `cargo test` fails to compile.
+
+**Fix Required:**
+- [ ] Change import to `mcp_context_rust`
+- [ ] Verify all test files use correct name
+- [ ] Run `cargo test` to confirm tests pass
+
+**Severity:** ⚠️ MEDIUM (CI/CD broken)
+
+---
+
+## ✅ Phase 0 Checklist
+
+| Task | Status | PR |
+|------|--------|-----|
+| 0.1 Path Traversal Fix | ✅ DONE | - |
+| 0.2 MCP Framing | ✅ DONE | - |
+| 0.3 ProjectAnalyzer Fix | ✅ DONE | - |
+| 0.4 Test Imports Fix | ✅ DONE | - |
+| Integration Test | ✅ DONE (10 tests pass) | - |
+| Claude Desktop Verification | ⬜ TODO | - |
 
 ---
 
 ## 🎯 Phase 1: Making it Actually Useful
 
+> **Only start after Phase 0 is complete.**
+
 ### 1.1 Corporate Knowledge Base Integration
 
 **Problem:** Generic patterns from Microsoft Docs aren't unique value
 
-**Solution:** Connect to YOUR company's knowledge
-
-```rust
-// src/integrations/corporate_kb.rs
-pub struct CorporateKnowledgeBase {
-    confluence_client: ConfluenceClient,
-    sharepoint_client: SharePointClient,
-    internal_wiki: WikiClient,
-}
-
-impl CorporateKnowledgeBase {
-    pub async fn search_internal_patterns(&self, query: &str) -> Vec<Pattern> {
-        // Search YOUR company's Confluence/Wiki
-        let results = self.confluence_client
-            .search(&format!("space=Engineering AND text~'{}'", query))
-            .await?;
-
-        // Return patterns specific to YOUR codebase
-        self.parse_to_patterns(results)
-    }
-
-    pub async fn get_team_conventions(&self, team: &str) -> Vec<Convention> {
-        // Fetch coding standards specific to your team
-        self.sharepoint_client
-            .get_document(&format!("/teams/{}/coding-standards.md", team))
-            .await?
-    }
-}
-```
+**Solution:** Connect to YOUR company's knowledge (Confluence/SharePoint/Wiki)
 
 **Impact:** 🚀 HIGH - Claude gets access to knowledge it doesn't have
 
 ---
 
-### 1.2 Real-Time Code Quality Integration
-
-**Problem:** Tree-sitter analysis is basic compared to real tools
-
-**Solution:** Integrate with actual code quality tools
-
-```rust
-// src/integrations/quality.rs
-pub struct CodeQualityAnalyzer {
-    sonarqube: SonarQubeClient,
-    roslyn: RoslynAnalyzer,
-}
-
-impl CodeQualityAnalyzer {
-    pub async fn analyze_project_quality(&self, project: &str) -> QualityReport {
-        // Real metrics from SonarQube
-        let sonar_metrics = self.sonarqube.get_metrics(project).await?;
-
-        QualityReport {
-            code_smells: sonar_metrics.code_smells,
-            technical_debt: sonar_metrics.technical_debt,
-            coverage: sonar_metrics.coverage,
-            vulnerabilities: sonar_metrics.vulnerabilities,
-            duplications: sonar_metrics.duplications,
-            // Claude can now give REAL suggestions based on REAL data
-        }
-    }
-
-    pub async fn run_roslyn_analyzers(&self, file: &str) -> Vec<Diagnostic> {
-        // Use actual Roslyn analyzers
-        self.roslyn.analyze(file).await?
-    }
-}
-```
-
-**Impact:** 🚀 HIGH - Real actionable insights, not generic advice
-
----
-
-### 1.3 Production Monitoring Integration
+### 1.2 Production Monitoring Integration
 
 **Problem:** No visibility into how code behaves in production
 
-**Solution:** Connect to production logs and monitoring
+**Solution:** Connect to App Insights/Datadog/Splunk
 
-```rust
-// src/integrations/production.rs
-pub struct ProductionMonitor {
-    app_insights: AppInsightsClient,
-    splunk: SplunkClient,
-    datadog: DatadogClient,
-}
+**Impact:** 🚀 CRITICAL - Claude knows what's actually broken
 
-impl ProductionMonitor {
-    pub async fn get_component_health(&self, component: &str) -> HealthReport {
-        // Real production data
-        let errors = self.app_insights
-            .query_exceptions(&format!("component == '{}'", component))
-            .await?;
+---
 
-        let performance = self.datadog
-            .get_metrics(&format!("component:{}", component))
-            .await?;
+### 1.3 Code Quality Integration
 
-        HealthReport {
-            error_rate: errors.rate,
-            common_errors: errors.top_5,
-            avg_response_time: performance.p50,
-            p99_latency: performance.p99,
-            // Claude can now say: "This component has 15% error rate in prod"
-        }
-    }
+**Problem:** Tree-sitter analysis is basic compared to real tools
 
-    pub async fn get_related_incidents(&self, component: &str) -> Vec<Incident> {
-        // Search incident history
-        self.splunk.search(&format!("component={} severity=high", component)).await?
-    }
-}
-```
+**Solution:** Integrate SonarQube/Roslyn analyzers
 
-**Impact:** 🚀 CRITICAL - Claude knows what's actually broken in production
+**Impact:** 🚀 HIGH - Real actionable insights
 
 ---
 
@@ -155,199 +172,7 @@ impl ProductionMonitor {
 
 **Solution:** Integrate with Jira/Azure DevOps/GitHub Issues
 
-```rust
-// src/integrations/issues.rs
-pub struct IssueTracker {
-    jira: JiraClient,
-    azure_devops: AzureDevOpsClient,
-}
-
-impl IssueTracker {
-    pub async fn get_open_bugs(&self, component: &str) -> Vec<Bug> {
-        // Real bugs from YOUR backlog
-        self.jira
-            .query(&format!(
-                "project = MYPROJECT AND component = '{}' AND status != Done",
-                component
-            ))
-            .await?
-    }
-
-    pub async fn get_tech_debt(&self, area: &str) -> Vec<TechDebtItem> {
-        // Known tech debt items
-        self.azure_devops
-            .query_work_items(&format!("Tags CONTAINS 'tech-debt' AND Area = '{}'", area))
-            .await?
-    }
-
-    pub async fn create_work_item(&self, suggestion: &Suggestion) -> WorkItem {
-        // Claude can create tickets directly
-        self.jira.create_issue(IssueInput {
-            project: "MYPROJECT",
-            issue_type: "Improvement",
-            summary: suggestion.title,
-            description: suggestion.description,
-            labels: vec!["claude-suggested", "improvement"],
-        }).await?
-    }
-}
-```
-
-**Impact:** 🚀 HIGH - Claude sees YOUR backlog and can create tickets
-
----
-
-### 1.5 CI/CD Integration
-
-**Problem:** No awareness of build/deployment status
-
-**Solution:** Connect to GitHub Actions/Azure Pipelines
-
-```rust
-// src/integrations/cicd.rs
-pub struct CICDIntegration {
-    github_actions: GitHubActionsClient,
-    azure_pipelines: AzurePipelinesClient,
-}
-
-impl CICDIntegration {
-    pub async fn check_build_status(&self, branch: &str) -> BuildStatus {
-        let run = self.github_actions
-            .get_latest_workflow_run(branch)
-            .await?;
-
-        BuildStatus {
-            status: run.conclusion,
-            failed_tests: run.failed_tests,
-            build_time: run.duration,
-            coverage_delta: run.coverage_change,
-            // Claude knows if your changes broke the build
-        }
-    }
-
-    pub async fn get_deployment_history(&self, env: &str) -> Vec<Deployment> {
-        self.azure_pipelines
-            .get_deployments(&format!("environment == '{}'", env))
-            .await?
-    }
-}
-```
-
-**Impact:** 🚀 MEDIUM - Claude aware of pipeline status
-
----
-
-## 🔥 Phase 2: Advanced Features (Real Time Savers)
-
-### 2.1 Automated Refactoring Suggestions
-
-```rust
-// Analyze codebase patterns
-pub async fn suggest_refactorings(&self, project: &str) -> Vec<Refactoring> {
-    let duplications = self.sonarqube.get_duplications(project).await?;
-    let complexity = self.roslyn.get_complex_methods(project).await?;
-
-    // Generate CONCRETE refactoring suggestions with code diffs
-    vec![
-        Refactoring {
-            type: "Extract Method",
-            file: "Services/DataService.cs",
-            line: 45,
-            reason: "Method complexity: 25 (threshold: 10)",
-            estimated_time_saved: "15 min",
-            diff: "...", // Actual code changes
-        }
-    ]
-}
-```
-
-### 2.2 Dependency Vulnerability Scanner
-
-```rust
-pub async fn scan_vulnerabilities(&self, project: &str) -> SecurityReport {
-    // Real vulnerability scanning
-    let nuget_packages = self.parse_packages_from_csproj(project)?;
-    let vulnerabilities = self.nvd_client.check_vulnerabilities(nuget_packages).await?;
-
-    SecurityReport {
-        critical: vulnerabilities.iter().filter(|v| v.severity == "CRITICAL").count(),
-        high: vulnerabilities.iter().filter(|v| v.severity == "HIGH").count(),
-        vulnerable_packages: vulnerabilities,
-        // Claude can suggest exact package updates needed
-    }
-}
-```
-
-### 2.3 Performance Profiling Integration
-
-```rust
-pub async fn analyze_performance(&self, trace_id: &str) -> PerformanceAnalysis {
-    // Connect to Application Insights / New Relic
-    let trace = self.app_insights.get_trace(trace_id).await?;
-
-    // Find bottlenecks
-    let slow_operations = trace.spans
-        .iter()
-        .filter(|s| s.duration > Duration::from_millis(100))
-        .collect();
-
-    PerformanceAnalysis {
-        total_duration: trace.duration,
-        bottlenecks: slow_operations,
-        optimization_suggestions: self.suggest_optimizations(slow_operations),
-        // Claude knows exactly what's slow in production
-    }
-}
-```
-
-### 2.4 Cost Analysis (Cloud Resources)
-
-```rust
-pub async fn analyze_cloud_costs(&self, resource_group: &str) -> CostAnalysis {
-    // Azure Cost Management API
-    let costs = self.azure_cost_mgmt
-        .get_costs(resource_group, TimeRange::Last30Days)
-        .await?;
-
-    CostAnalysis {
-        total_cost: costs.total,
-        top_resources: costs.by_resource,
-        cost_trends: costs.trend,
-        optimization_opportunities: vec![
-            "App Service Plan: Over-provisioned (avg CPU: 15%)",
-            "Storage Account: 40% unused capacity",
-        ],
-        // Claude can suggest cost optimizations
-    }
-}
-```
-
----
-
-## 📈 Expected Impact After Improvements
-
-### Current State (v0.1.0)
-```
-Time Saved: ❌ -30 min (setup overhead)
-Unique Value: ⭐⭐ (learning project)
-Production Ready: ❌ No
-```
-
-### After Phase 1 Integrations
-```
-Time Saved: ✅ 2-4 hours/week per developer
-Unique Value: ⭐⭐⭐⭐⭐ (access to private data)
-Production Ready: ✅ Yes (with corporate data)
-ROI: Positive after 2 weeks
-```
-
-### After Phase 2 Advanced Features
-```
-Time Saved: ✅ 5-10 hours/week per developer
-Unique Value: ⭐⭐⭐⭐⭐ (comprehensive insights)
-Production Ready: ✅ Enterprise-grade
-ROI: Positive after 1 week
-```
+**Impact:** 🚀 HIGH - Claude sees YOUR backlog
 
 ---
 
@@ -355,66 +180,51 @@ ROI: Positive after 1 week
 
 | Feature | Impact | Complexity | Priority |
 |---------|--------|------------|----------|
-| Corporate KB | 🔥 Critical | Medium | **P0** |
-| Production Monitoring | 🔥 Critical | Medium | **P0** |
-| SonarQube Integration | High | Low | **P1** |
-| Jira/ADO Integration | High | Medium | **P1** |
-| CI/CD Integration | Medium | Low | P2 |
-| Vulnerability Scanner | High | Medium | P2 |
-| Performance Profiling | Medium | High | P3 |
-| Cost Analysis | Low | Medium | P4 |
+| **Path Traversal Fix** | 🔥 Security | Low | **P0** |
+| **MCP Framing Fix** | 🔥 Breaking | Medium | **P0** |
+| **ProjectAnalyzer Fix** | 🔥 Core | Low | **P0** |
+| **Test Imports Fix** | 🔥 CI/CD | Trivial | **P0** |
+| Corporate KB | High | Medium | P1 |
+| Production Monitoring | High | Medium | P1 |
+| SonarQube Integration | Medium | Low | P2 |
+| Jira/ADO Integration | Medium | Medium | P2 |
 
 ---
 
-## 🚀 Implementation Timeline
+## 📈 Expected Impact
 
-### Month 1: Foundation (P0)
-- Week 1-2: Corporate Knowledge Base integration
-- Week 3-4: Production monitoring integration
-- **Outcome:** Claude has access to YOUR company's data
+### Current State (v0.1.0)
+```
+Usable: ❌ No (critical bugs)
+Security: ❌ Vulnerable
+MCP Compatible: ❌ No
+Production Ready: ❌ No
+```
 
-### Month 2: Quality & Workflow (P1)
-- Week 1-2: SonarQube + Roslyn integration
-- Week 3-4: Jira/Azure DevOps integration
-- **Outcome:** Real code quality insights + ticket management
+### After Phase 0 (v0.2.0)
+```
+Usable: ✅ Yes
+Security: ✅ Fixed
+MCP Compatible: ✅ Yes
+Production Ready: ⚠️ Basic functionality only
+```
 
-### Month 3: DevOps (P2)
-- Week 1-2: CI/CD integration
-- Week 3-4: Dependency vulnerability scanner
-- **Outcome:** Full development lifecycle visibility
-
-### Month 4+: Advanced (P3-P4)
-- Performance profiling
-- Cost analysis
-- ML-based pattern detection
-- **Outcome:** Enterprise-grade AI assistant
-
----
-
-## 💰 Estimated ROI
-
-### Investment
-- Development time: ~3-4 months (1 developer)
-- Infrastructure: ~$200/month (API costs)
-- **Total:** ~$30,000 (salary + infra)
-
-### Returns (for team of 10 developers)
-- Time saved per dev: 5 hours/week
-- Team time saved: 50 hours/week = 2080 hours/year
-- Value at $75/hour: **$156,000/year**
-
-**ROI:** 420% in first year
+### After Phase 1 (v1.0.0)
+```
+Time Saved: ✅ 2-4 hours/week per developer
+Unique Value: ⭐⭐⭐⭐⭐ (corporate data access)
+Production Ready: ✅ Yes
+```
 
 ---
 
 ## 🎓 Lessons Learned
 
-### What This PoC Taught Us
-1. ✅ MCP protocol works great
+1. ✅ MCP protocol works great (when implemented correctly)
 2. ✅ Rust + tree-sitter is solid architecture
-3. ✅ Claude Desktop integration is straightforward
-4. ❌ Generic patterns don't add value
-5. ❌ Local storage doesn't scale
+3. ❌ Need proper input validation from day one
+4. ❌ Must test with real MCP clients during development
+5. ❌ Don't skip implementing features (empty files array)
 6. ✅ Real value = access to private/corporate data
 
 ### Key Insight
@@ -423,46 +233,10 @@ ROI: Positive after 1 week
 
 ---
 
-## 📚 Next Steps
-
-### To Make This Production-Ready:
-
-1. **Start with P0 integrations** (corporate KB + production monitoring)
-2. **Measure actual time savings** with small team pilot
-3. **Iterate based on real usage** patterns
-4. **Add P1 features** if P0 proves valuable
-5. **Scale gradually** to entire engineering org
-
-### Questions to Answer:
-- [ ] Which corporate knowledge base do we use? (Confluence/SharePoint/Wiki)
-- [ ] What monitoring tools are in production? (App Insights/Datadog/Splunk)
-- [ ] What's our code quality tool? (SonarQube/CodeQL)
-- [ ] What's our issue tracker? (Jira/Azure DevOps/GitHub Issues)
-- [ ] What's our CI/CD? (GitHub Actions/Azure Pipelines/GitLab CI)
+**Current Status:** 🔴 Critical fixes needed
+**Next Milestone:** v0.2.0 (Phase 0 complete)
+**Target Status:** 🚀 Production-Ready
 
 ---
 
-## 🎯 Success Metrics
-
-### Phase 1 (Corporate Integration)
-- [ ] Claude can answer questions using internal docs
-- [ ] Claude knows about production errors for specific components
-- [ ] Developers report time savings in surveys
-- [ ] Usage metrics show daily active users
-
-### Phase 2 (Advanced Features)
-- [ ] Reduced time to resolve incidents (measure MTTR)
-- [ ] Increased code quality scores (SonarQube trends)
-- [ ] Reduced tech debt (tracked in Jira)
-- [ ] Improved developer satisfaction (NPS score)
-
----
-
-**Current Status:** 🧪 Experimental PoC
-**Target Status:** 🚀 Production-Ready Enterprise Tool
-**Timeline:** 3-4 months
-**Expected ROI:** 420% first year
-
----
-
-*This roadmap reflects an honest assessment of the current state and realistic path to production value.*
+*This roadmap was updated after a security and functionality audit on 2025-11-30.*

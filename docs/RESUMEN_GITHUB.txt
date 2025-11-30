@@ -3,7 +3,7 @@
 ================================================================================
 
 NOMBRE DEL REPOSITORIO:
-  mcp-dotnet-context
+  mcp-rust-context
 
 DESCRIPCIÓN CORTA:
   🦀 Experimental MCP server for .NET & Blazor Server - Context reinforcement 
@@ -45,7 +45,7 @@ DESCRIPCIÓN CORTA:
   ESTRUCTURA DEL PROYECTO
 ================================================================================
 
-mcp-dotnet-context/
+mcp-rust-context/
 ├── src/                          ✅ Código fuente Rust
 │   ├── main.rs
 │   ├── lib.rs
@@ -83,7 +83,7 @@ ARCHIVOS EXCLUIDOS (.gitignore):
 ================================================================================
 
 1. INICIALIZAR GIT:
-   cd c:\MCPs\clone\mcp-dotnet-context
+   cd c:\MCPs\clone\mcp-rust-context
    git init
    git add .
    git status
@@ -103,13 +103,13 @@ ARCHIVOS EXCLUIDOS (.gitignore):
 
 3. CREAR REPO EN GITHUB:
    - URL: https://github.com/new
-   - Nombre: mcp-dotnet-context
+   - Nombre: mcp-rust-context
    - Descripción: [usar descripción corta de arriba]
    - Público o Privado: Tu elección
    - NO inicializar con README
 
 4. CONECTAR Y SUBIR:
-   git remote add origin https://github.com/[TU-USUARIO]/mcp-dotnet-context.git
+   git remote add origin https://github.com/[TU-USUARIO]/mcp-rust-context.git
    git branch -M main
    git push -u origin main
 
@@ -144,7 +144,7 @@ TOPICS (Settings → Topics):
 ABOUT (Settings → General):
   Description: Experimental MCP server for .NET & Blazor Server - Context 
               reinforcement and pattern training research
-  Website: https://github.com/[TU-USUARIO]/mcp-dotnet-context
+  Website: https://github.com/[TU-USUARIO]/mcp-rust-context
   Topics: [ver arriba]
 
 ================================================================================

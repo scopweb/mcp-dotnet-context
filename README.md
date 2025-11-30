@@ -1,6 +1,6 @@
 # 🦀 MCP Context Rust
 
-> A specialized Model Context Protocol (MCP) server written in Rust that provides intelligent context analysis and code pattern training for AI assistants.
+> A multi-language Model Context Protocol (MCP) server written in Rust that provides intelligent context analysis and code pattern training for AI assistants. Supports Rust, Node.js, Python, Go, Java, PHP, and .NET projects.
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -22,8 +22,16 @@
 ## ✨ Features
 
 ### Core Functionality
+- 🌐 **Multi-Language Support**: Analyze projects in 7+ languages
+  - **Rust** (Cargo.toml) - actix-web, axum, tokio
+  - **Node.js** (package.json) - React, Vue, Next.js, Express, Svelte
+  - **Python** (pyproject.toml) - Django, Flask, FastAPI
+  - **Go** (go.mod) - Gin, Fiber
+  - **Java** (pom.xml) - Spring, Gradle
+  - **PHP** (composer.json) - Laravel, Symfony, WordPress
+  - **.NET** (.csproj) - Blazor, ASP.NET Core
 - 🔍 **Deep Code Analysis**: Parse project files, analyze code with tree-sitter, detect dependencies
-- 📚 **27+ Built-in Patterns**: Best practices for various development scenarios
+- 📚 **60+ Built-in Patterns**: Best practices for various development scenarios
   - 🔄 Lifecycle (6 patterns)
   - ⚡ Performance (5 patterns)
   - 🌐 JavaScript Interop (4 patterns)
@@ -130,12 +138,16 @@ Close and reopen Claude Desktop to load the MCP server.
 ### Analyze a Project
 
 ```
-You: Analyze my project at C:\Projects\MyApp
+You: Analyze my project at C:\Projects\MyLaravelApp
 
 Claude → calls analyze-project tool
-Server → analyzes project files, code, dependencies
-Claude → shows structure, patterns, suggestions
+Server → detects PHP/Laravel, parses composer.json, finds Vue frontend
+Claude → shows structure, dependencies, framework-specific suggestions
 ```
+
+**Supported projects:**
+- Rust, Node.js, Python, Go, Java, PHP, .NET
+- Auto-detects framework (Laravel, React, Django, Spring, etc.)
 
 ### Get Code Patterns
 
@@ -183,7 +195,7 @@ Server → returns total patterns, categories, frameworks
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `analyze-project` | Analyze project structure | `project_path` (string) |
+| `analyze-project` | Analyze any project (Rust, Node, Python, Go, Java, PHP, .NET) | `project_path` (string) |
 | `get-patterns` | Get patterns by framework/category | `framework` (string), `category` (optional) |
 | `search-patterns` | Advanced pattern search | `query`, `framework`, `category`, `tags`, `min_score` |
 | `train-pattern` | Add custom pattern | `id`, `category`, `framework`, `title`, `description`, `code`, `tags` |
@@ -199,8 +211,13 @@ mcp-context-rust/
 │   ├── main.rs              # Entry point
 │   ├── lib.rs               # Library root
 │   ├── config.rs            # Configuration
-│   ├── types.rs             # Shared types
-│   ├── analyzer/            # Code analysis
+│   ├── types.rs             # Shared types (Project, Dependency, etc.)
+│   ├── analyzer/
+│   │   ├── mod.rs           # Analyzer module
+│   │   ├── detector.rs      # Project type detection
+│   │   ├── generic.rs       # Multi-language analyzer
+│   │   ├── project.rs       # Legacy .NET analyzer
+│   │   └── csharp.rs        # C# tree-sitter parser
 │   ├── context/             # Context generation
 │   ├── training/            # Pattern management
 │   │   └── mod.rs           # Training system

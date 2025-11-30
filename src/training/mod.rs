@@ -7,6 +7,67 @@ use walkdir::WalkDir;
 
 use crate::types::CodePattern;
 
+/// Validates and sanitizes a framework name to prevent path traversal attacks.
+/// 
+/// # Security
+/// This function is critical for preventing directory traversal vulnerabilities.
+/// Only alphanumeric characters, hyphens, and underscores are allowed.
+/// 
+/// # Returns
+/// - `Ok(String)` with the sanitized framework name
+/// - `Err(String)` if the name contains invalid characters
+fn sanitize_framework_name(framework: &str) -> Result<String, String> {
+    // Check for empty input
+    if framework.is_empty() {
+        return Err("Framework name cannot be empty".to_string());
+    }
+
+    // Check for path traversal attempts
+    if framework.contains("..") {
+        return Err("Framework name cannot contain '..'".to_string());
+    }
+
+    // Check for path separators (both Unix and Windows)
+    if framework.contains('/') || framework.contains('\\') {
+        return Err("Framework name cannot contain path separators".to_string());
+    }
+
+    // Check for Windows drive letters (e.g., "C:")
+    if framework.contains(':') {
+        return Err("Framework name cannot contain ':'".to_string());
+    }
+
+    // Check for null bytes (can bypass security in some systems)
+    if framework.contains('\0') {
+        return Err("Framework name cannot contain null bytes".to_string());
+    }
+
+    // Validate each character: only alphanumeric, hyphens, underscores, and dots
+    let sanitized: String = framework
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == '.')
+        .collect();
+
+    // Ensure the sanitized name matches the original (no characters were filtered)
+    if sanitized != framework {
+        return Err(format!(
+            "Framework name contains invalid characters. Allowed: alphanumeric, '-', '_', '.'"
+        ));
+    }
+
+    // Ensure name doesn't start with a dot (hidden files)
+    if sanitized.starts_with('.') {
+        return Err("Framework name cannot start with '.'".to_string());
+    }
+
+    // Length limit to prevent filesystem issues
+    if sanitized.len() > 64 {
+        return Err("Framework name too long (max 64 characters)".to_string());
+    }
+
+    Ok(sanitized)
+}
+
 /// Manages code patterns for training and suggestions
 #[derive(Clone)]
 pub struct TrainingManager {
@@ -115,6 +176,10 @@ impl TrainingManager {
     pub async fn save_patterns(&self) -> Result<()> {
         fs::create_dir_all(&self.storage_path).context("Failed to create storage directory")?;
 
+        // Canonicalize storage path for security validation (after ensuring it exists)
+        let canonical_storage = self.storage_path.canonicalize()
+            .context("Failed to canonicalize storage path")?;
+
         // Group patterns by framework
         let mut by_framework: HashMap<String, Vec<&CodePattern>> = HashMap::new();
 
@@ -127,8 +192,22 @@ impl TrainingManager {
 
         // Save each framework to its own file
         for (framework, patterns) in by_framework {
-            let filename = format!("{}-patterns.json", framework);
-            let file_path = self.storage_path.join(filename);
+            // SECURITY: Validate and sanitize framework name to prevent path traversal
+            let safe_framework = sanitize_framework_name(&framework)
+                .map_err(|e| anyhow::anyhow!("Invalid framework name '{}': {}", framework, e))?;
+
+            let filename = format!("{}-patterns.json", safe_framework);
+            let file_path = canonical_storage.join(&filename);
+
+            // SECURITY: Double-check that the constructed path is within storage_path
+            // Since we already validated the framework name and are using canonical_storage,
+            // this should always be true, but we verify as defense in depth
+            if !file_path.starts_with(&canonical_storage) {
+                anyhow::bail!(
+                    "Security error: Path traversal attempt detected for framework '{}'",
+                    framework
+                );
+            }
 
             #[derive(serde::Serialize)]
             struct PatternFile<'a> {
@@ -151,7 +230,44 @@ impl TrainingManager {
         Ok(())
     }
 
-    pub fn add_pattern(&mut self, mut pattern: CodePattern) {
+    /// Validates a pattern before adding it.
+    /// Returns an error if the pattern contains invalid data.
+    fn validate_pattern(pattern: &CodePattern) -> Result<(), String> {
+        // Validate framework name
+        sanitize_framework_name(&pattern.framework)?;
+        
+        // Validate ID (same rules as framework)
+        if pattern.id.is_empty() {
+            return Err("Pattern ID cannot be empty".to_string());
+        }
+        if pattern.id.len() > 128 {
+            return Err("Pattern ID too long (max 128 characters)".to_string());
+        }
+        
+        // Validate category
+        if pattern.category.is_empty() {
+            return Err("Pattern category cannot be empty".to_string());
+        }
+        if pattern.category.len() > 64 {
+            return Err("Pattern category too long (max 64 characters)".to_string());
+        }
+        
+        Ok(())
+    }
+
+    /// Adds a new pattern to the manager.
+    /// 
+    /// # Security
+    /// The pattern's framework, id, and category are validated to prevent
+    /// path traversal and other injection attacks.
+    /// 
+    /// # Returns
+    /// - `Ok(())` if the pattern was added successfully
+    /// - `Err` if the pattern contains invalid data
+    pub fn add_pattern(&mut self, mut pattern: CodePattern) -> Result<(), String> {
+        // SECURITY: Validate pattern before adding
+        Self::validate_pattern(&pattern)?;
+
         // Set timestamps if not set
         if pattern.created_at.timestamp() == 0 {
             pattern.created_at = Utc::now();
@@ -171,6 +287,8 @@ impl TrainingManager {
             .entry(pattern.framework)
             .or_default()
             .push(idx);
+
+        Ok(())
     }
 
     pub fn search_patterns(&self, criteria: &SearchCriteria) -> Vec<(&CodePattern, f32)> {

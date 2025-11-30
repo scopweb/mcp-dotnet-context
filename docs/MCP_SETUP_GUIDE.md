@@ -17,14 +17,14 @@
 ## 🔧 Paso 1: Compilar el Servidor
 
 ```bash
-cd mcp-dotnet-context
+cd mcp-rust-context
 cargo build --release
 ```
 
 El ejecutable se generará en:
 ```
-target/release/mcp-dotnet-context.exe  (Windows)
-target/release/mcp-dotnet-context      (Linux/Mac)
+target/release/mcp-rust-context.exe  (Windows)
+target/release/mcp-rust-context      (Linux/Mac)
 ```
 
 ---
@@ -43,7 +43,7 @@ target/release/mcp-dotnet-context      (Linux/Mac)
    {
      "mcpServers": {
        "dotnet-context": {
-         "command": "C:\\ruta\\completa\\target\\release\\mcp-dotnet-context.exe",
+         "command": "C:\\ruta\\completa\\target\\release\\mcp-rust-context.exe",
          "args": [],
          "env": {
            "RUST_LOG": "info"
@@ -65,7 +65,7 @@ target/release/mcp-dotnet-context      (Linux/Mac)
    {
      "mcpServers": {
        "dotnet-context": {
-         "command": "/ruta/completa/target/release/mcp-dotnet-context",
+         "command": "/ruta/completa/target/release/mcp-rust-context",
          "args": [],
          "env": {
            "RUST_LOG": "info"
@@ -373,12 +373,12 @@ Obtiene estadísticas del sistema
 
 2. Prueba ejecutar manualmente:
    ```bash
-   ./target/release/mcp-dotnet-context
+   ./target/release/mcp-rust-context
    ```
 
 3. Verifica los logs con:
    ```bash
-   RUST_LOG=debug ./target/release/mcp-dotnet-context
+   RUST_LOG=debug ./target/release/mcp-rust-context
    ```
 
 ### Error: "Pattern file not found"
@@ -405,7 +405,7 @@ Obtiene estadísticas del sistema
 Los logs se escriben a stderr. Para verlos:
 
 ```bash
-RUST_LOG=debug ./target/release/mcp-dotnet-context 2> server.log
+RUST_LOG=debug ./target/release/mcp-rust-context 2> server.log
 ```
 
 Niveles de log:

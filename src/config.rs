@@ -58,7 +58,7 @@ impl Default for Config {
 
         Self {
             server: ServerConfig {
-                name: "mcp-dotnet-context".to_string(),
+                name: "mcp-rust-context".to_string(),
                 version: "0.1.0".to_string(),
                 transport: "stdio".to_string(),
             },
@@ -102,7 +102,7 @@ impl Config {
     pub fn load() -> Result<Self> {
         // Try to load from config file, otherwise use defaults
         let config_path =
-            dirs::config_dir().map(|p| p.join("mcp-dotnet-context").join("config.toml"));
+            dirs::config_dir().map(|p| p.join("mcp-rust-context").join("config.toml"));
 
         if let Some(path) = config_path {
             if path.exists() {

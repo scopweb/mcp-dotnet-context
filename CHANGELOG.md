@@ -12,6 +12,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-Language Project Support** (analyzer/generic.rs, analyzer/detector.rs)
+  - Automatic project type detection based on config files
+  - **Rust**: Cargo.toml (detects actix-web, axum, tokio)
+  - **Node.js**: package.json (detects React, Vue, Next.js, Express, Svelte)
+  - **Python**: pyproject.toml, requirements.txt, setup.py (detects Django, Flask, FastAPI)
+  - **Go**: go.mod (detects Gin, Fiber)
+  - **Java**: pom.xml, build.gradle (detects Spring)
+  - **PHP**: composer.json (detects Laravel, Symfony, WordPress, CodeIgniter, Yii, CakePHP, Slim, Drupal)
+  - **.NET**: .csproj, .fsproj, .sln (detects Blazor, ASP.NET Core)
+  
+- **PHP Framework Detection** (analyzer/generic.rs)
+  - Laravel: artisan file, laravel/framework dependency
+  - Symfony: symfony/framework-bundle
+  - WordPress: wp-config.php, wp-content directory
+  - Full composer.json parsing with require/require-dev
+  - PHP version requirement extraction
+  
+- **Frontend Integration for PHP** (analyzer/generic.rs)
+  - Vue.js detection from package.json
+  - React detection (Inertia.js support)
+  - Vite bundler detection
+  - Laravel Mix detection
+  
+- **PHP-specific Suggestions** (context/mod.rs)
+  - Missing .env file warning for Laravel
+  - Laravel 8.x upgrade suggestions
+  - Inertia.js best practices
+  - Security package recommendations
+
+- **Generic Project Types** (types.rs)
+  - New `Project` struct for multi-language support
+  - `ProjectType` enum: DotNet, Rust, Node, Python, Go, Java, Php, Unknown
+  - `Dependency` struct with dev_only flag
+  - `SourceFile` with language detection
+  - `ProjectMetadata` for framework-specific info
+
+### Security
+- **CRITICAL: Fixed Path Traversal Vulnerability** (training/mod.rs)
+  - Added `sanitize_framework_name()` function to validate framework names
+  - Rejects path separators (`/`, `\`, `..`), drive letters (`:`), and null bytes
+  - Only allows alphanumeric characters, hyphens, underscores, and dots
+  - Added canonical path verification in `save_patterns()`
+  - Added validation in `add_pattern()` before storing patterns
+  - Maximum length limit (64 chars for framework, 128 for ID)
+
+- **CRITICAL: Implemented MCP Protocol Framing** (mcp/mod.rs)
+  - Added proper Content-Length header parsing for incoming messages
+  - Added Content-Length header to outgoing responses
+  - Maintains backwards compatibility with legacy newline-delimited JSON
+  - Server now works correctly with Claude Desktop and standard MCP clients
+
+### Fixed
+- **ProjectAnalyzer now returns analyzed C# files** (analyzer/project.rs)
+  - `analyze()` method now uses `CSharpAnalyzer` to parse each .cs file
+  - Files are populated in `DotNetProject.files` instead of always being empty
+  - Errors in individual files are logged but don't fail the entire analysis
+  - Fixed unreachable pattern warning in XML parsing
+
+- **Tests now compile and pass** (tests/*.rs)
+  - Changed imports from `mcp_dotnet_context` to `mcp_context_rust`
+  - Updated `add_pattern` calls to handle new `Result` return type
+  - All 10 tests passing (2 analyzer + 8 training)
+
 ### Changed
 - **Documentation Cleanup**
   - Renamed project from "MCP .NET Context" to "MCP Context Rust"
