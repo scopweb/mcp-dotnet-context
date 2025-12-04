@@ -8,11 +8,11 @@ use walkdir::WalkDir;
 use crate::types::CodePattern;
 
 /// Validates and sanitizes a framework name to prevent path traversal attacks.
-/// 
+///
 /// # Security
 /// This function is critical for preventing directory traversal vulnerabilities.
 /// Only alphanumeric characters, hyphens, and underscores are allowed.
-/// 
+///
 /// # Returns
 /// - `Ok(String)` with the sanitized framework name
 /// - `Err(String)` if the name contains invalid characters
@@ -177,7 +177,9 @@ impl TrainingManager {
         fs::create_dir_all(&self.storage_path).context("Failed to create storage directory")?;
 
         // Canonicalize storage path for security validation (after ensuring it exists)
-        let canonical_storage = self.storage_path.canonicalize()
+        let canonical_storage = self
+            .storage_path
+            .canonicalize()
             .context("Failed to canonicalize storage path")?;
 
         // Group patterns by framework
@@ -235,7 +237,7 @@ impl TrainingManager {
     fn validate_pattern(pattern: &CodePattern) -> Result<(), String> {
         // Validate framework name
         sanitize_framework_name(&pattern.framework)?;
-        
+
         // Validate ID (same rules as framework)
         if pattern.id.is_empty() {
             return Err("Pattern ID cannot be empty".to_string());
@@ -243,7 +245,7 @@ impl TrainingManager {
         if pattern.id.len() > 128 {
             return Err("Pattern ID too long (max 128 characters)".to_string());
         }
-        
+
         // Validate category
         if pattern.category.is_empty() {
             return Err("Pattern category cannot be empty".to_string());
@@ -251,16 +253,16 @@ impl TrainingManager {
         if pattern.category.len() > 64 {
             return Err("Pattern category too long (max 64 characters)".to_string());
         }
-        
+
         Ok(())
     }
 
     /// Adds a new pattern to the manager.
-    /// 
+    ///
     /// # Security
     /// The pattern's framework, id, and category are validated to prevent
     /// path traversal and other injection attacks.
-    /// 
+    ///
     /// # Returns
     /// - `Ok(())` if the pattern was added successfully
     /// - `Err` if the pattern contains invalid data
