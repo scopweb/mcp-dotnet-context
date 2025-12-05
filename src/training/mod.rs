@@ -50,9 +50,10 @@ fn sanitize_framework_name(framework: &str) -> Result<String, String> {
 
     // Ensure the sanitized name matches the original (no characters were filtered)
     if sanitized != framework {
-        return Err(format!(
+        return Err(
             "Framework name contains invalid characters. Allowed: alphanumeric, '-', '_', '.'"
-        ));
+                .to_string(),
+        );
     }
 
     // Ensure name doesn't start with a dot (hidden files)

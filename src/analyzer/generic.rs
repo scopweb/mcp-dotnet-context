@@ -71,8 +71,10 @@ impl GenericAnalyzer {
         // Parse packages
         let dependencies = Self::parse_nuget_packages(&content);
 
-        let mut metadata = ProjectMetadata::default();
-        metadata.target_framework = target_framework;
+        let metadata = ProjectMetadata {
+            target_framework,
+            ..Default::default()
+        };
 
         Ok((name, None, dependencies, metadata))
     }
@@ -92,10 +94,12 @@ impl GenericAnalyzer {
         // Parse dependencies
         let dependencies = Self::parse_cargo_dependencies(&content);
 
-        let mut metadata = ProjectMetadata::default();
-        metadata.rust_edition = edition;
-        metadata.entry_point = Some("src/main.rs".to_string());
-        metadata.build_command = Some("cargo build".to_string());
+        let metadata = ProjectMetadata {
+            rust_edition: edition,
+            entry_point: Some("src/main.rs".to_string()),
+            build_command: Some("cargo build".to_string()),
+            ..Default::default()
+        };
 
         Ok((name, version, dependencies, metadata))
     }
@@ -135,8 +139,10 @@ impl GenericAnalyzer {
             }
         }
 
-        let mut metadata = ProjectMetadata::default();
-        metadata.entry_point = json["main"].as_str().map(|s| s.to_string());
+        let mut metadata = ProjectMetadata {
+            entry_point: json["main"].as_str().map(|s| s.to_string()),
+            ..Default::default()
+        };
 
         // Detect framework
         if json["dependencies"].get("react").is_some() {
