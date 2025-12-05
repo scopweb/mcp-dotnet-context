@@ -36,11 +36,13 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      # Paso 3: Ejecutar cargo-audit
+      # Paso 3: Instalar cargo-audit
+      - name: 🔧 Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      # Paso 4: Ejecutar cargo-audit
       - name: 🔍 Run cargo-audit
-        uses: rustsec/audit-check-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo audit
 
   # Job 2: Cargo Geiger (Detectar unsafe code)
   geiger:
